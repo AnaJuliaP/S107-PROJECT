@@ -32,7 +32,9 @@ gerenciador-tarefas-academicas/
 ├── src/
 │   └── gerenciador.py          # Lógica principal do sistema
 ├── tests/
-│   └── test_gerenciador.py     # Testes unitários com pytest
+│   ├── test_gerenciador.py     # Testes unitários (domínio)
+│   └── test_main_integration.py # Testes de integração (CLI / main)
+├── Dockerfile                  # Imagem local (Python 3.12 slim)
 ├── main.py                     # Interface via terminal
 ├── notificar.py                # Script de notificação do pipeline
 ├── requirements.txt            # Dependências do projeto
@@ -74,12 +76,32 @@ python main.py
 
 ## 🧪 Testes
 
-O projeto utiliza pytest para testes automatizados.
+O projeto utiliza pytest com cobertura mínima de **90%** (`pytest-cov`, configurado em `pyproject.toml`).
 
 Para executar:
 
 ```bash
 pytest -v
+```
+
+## 🐳 Docker (build local e testes no container)
+
+Construir a imagem (na raiz do repositório):
+
+```bash
+docker build -t gerenciador-tarefas:local .
+```
+
+Rodar a aplicação interativa:
+
+```bash
+docker run --rm -it gerenciador-tarefas:local
+```
+
+Rodar a suíte de testes (unitários + integração) com cobertura:
+
+```bash
+docker run --rm gerenciador-tarefas:local pytest -q
 ```
 
 ## 🔁 CI/CD com GitHub Actions
