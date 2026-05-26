@@ -2,8 +2,10 @@ pipeline {
     agent any
 
     environment {
-        PYTHON = 'python3'
-        PIP    = 'pip3'
+        PYTHON                   = 'python3'
+        PIP                      = 'pip3'
+        DOCKER_IMAGE             = 'leticialm/s107-project'
+        DOCKER_HUB_CREDENTIAL_ID = 'docker-hub-leticialm'
     }
 
     stages {
@@ -16,7 +18,9 @@ pipeline {
         stage('Instalar Dependências') {
             steps {
                 sh '''
-                    ${PIP} install --break-system-packages \
+                    apt-get update -qq
+                    apt-get install -y python3 python3-pip python3-venv docker.io
+                    pip3 install --break-system-packages \
                         pytest \
                         pytest-cov \
                         pytest-html \
@@ -54,6 +58,30 @@ pipeline {
                 success {
                     archiveArtifacts artifacts: 'dist/**',
                                      fingerprint: true
+                }
+            }
+        }
+
+        stage('Docker Build e Push (Docker Hub)') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: env.DOCKER_HUB_CREDENTIAL_ID,
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )
+                ]) {
+                    sh """
+                        set -e
+                        echo \$DOCKER_TOKEN | docker login -u \$DOCKER_USER --password-stdin
+                        docker build \\
+                            -t ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} \\
+                            -t ${env.DOCKER_IMAGE}:latest \\
+                            .
+                        docker push ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}
+                        docker push ${env.DOCKER_IMAGE}:latest
+                        docker logout || true
+                    """
                 }
             }
         }

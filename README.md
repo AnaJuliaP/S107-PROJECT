@@ -35,6 +35,7 @@ gerenciador-tarefas-academicas/
 │   ├── test_gerenciador.py     # Testes unitários (domínio)
 │   └── test_main_integration.py # Testes de integração (CLI / main)
 ├── Dockerfile                  # Imagem local (Python 3.12 slim)
+├── Jenkinsfile                 # Pipeline Jenkins (testes, build, Docker Hub)
 ├── main.py                     # Interface via terminal
 ├── notificar.py                # Script de notificação do pipeline
 ├── requirements.txt            # Dependências do projeto
@@ -103,6 +104,31 @@ Rodar a suíte de testes (unitários + integração) com cobertura:
 ```bash
 docker run --rm gerenciador-tarefas:local pytest -q
 ```
+
+Imagem publicada pelo Jenkins (Docker Hub), após o pipeline:
+
+```bash
+docker pull leticialm/s107-project:latest
+docker run --rm -it leticialm/s107-project:latest
+```
+
+## 🔁 Jenkins + publicação no Docker Hub
+
+O `Jenkinsfile` segue a ordem: **Checkout → Instalar Deps → Testes → Build → Docker Build e Push → Notificação**. O estágio **Docker Build e Push** envia a imagem para o repositório **`leticialm/s107-project`** no Docker Hub com as tags **`${BUILD_NUMBER}`** e **`latest`**.
+
+### Pré-requisitos
+
+1. **Docker Hub**: crie o repositório público (ou privado) `s107-project` na conta `leticialm`, se ainda não existir.
+2. **Access Token** no Hub: *Account Settings → Security → New Access Token* (não use a senha da conta).
+3. **Jenkins**
+   - Agente com **Docker** instalado e permissão de `docker build` / `docker push` (em laboratório costuma ser um agente Linux com Docker ou socket montado).
+   - **Credencial** (*Manage Jenkins → Credentials*):
+     - Tipo: **Username with password**
+     - Usuário: seu usuário Docker Hub (`leticialm`)
+     - Senha: o **token** de acesso
+     - ID da credencial: **`docker-hub-leticialm`** (tem que ser exatamente esse ID, ou altere o valor de `DOCKER_HUB_CREDENTIAL_ID` no `Jenkinsfile`)
+
+Cada execução bem-sucedida do job (após **Testes** e **Build** do pacote Python) faz `docker login`, `docker build`, `docker push` das duas tags e `docker logout`.
 
 ## 🔁 CI/CD com GitHub Actions
 
