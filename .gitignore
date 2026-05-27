@@ -11,3 +11,5 @@ build/
 site/test-report.html
 .vscode/
 .idea/
+.coverage
+htmlcov/
