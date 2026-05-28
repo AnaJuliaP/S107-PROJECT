@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
+
         PYTHON                   = 'python3'
-        PIP                      = 'pip3'
         DOCKER_IMAGE             = 'leticialm/s107-project'
         DOCKER_HUB_CREDENTIAL_ID = 'docker-hub-leticialm'
     }
@@ -15,12 +15,10 @@ pipeline {
             }
         }
 
-        stage('Instalar Dependências') {
+        stage('Instalar Dependências do Projeto') {
             steps {
                 sh '''
-                    apt-get update -qq
-                    apt-get install -y python3 python3-pip python3-venv docker.io
-                    pip3 install --break-system-packages \
+                    python3 -m pip install --break-system-packages --user \
                         pytest \
                         pytest-cov \
                         pytest-html \
@@ -33,7 +31,7 @@ pipeline {
         stage('Testes') {
             steps {
                 sh '''
-                    ${PYTHON} -m pytest tests/ \
+                    python3 -m pytest tests/ \
                         --cov=src \
                         --cov-report=term-missing \
                         --cov-report=xml:coverage.xml \
@@ -45,14 +43,15 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'report.html, coverage.xml',
-                                     fingerprint: true
+                                     fingerprint: true,
+                                     allowEmptyArchive: true
                 }
             }
         }
 
         stage('Build') {
             steps {
-                sh '${PYTHON} -m build'
+                sh 'python3 -m build'
             }
             post {
                 success {
@@ -62,7 +61,7 @@ pipeline {
             }
         }
 
-        stage('Docker Build e Push (Docker Hub)') {
+        stage('Docker Build e Push') {
             steps {
                 withCredentials([
                     usernamePassword(
@@ -88,19 +87,7 @@ pipeline {
 
         stage('Notificação') {
             steps {
-                script {
-                    def buildStatus = currentBuild.currentResult
-                    def jobName     = env.JOB_NAME
-                    def buildNumber = env.BUILD_NUMBER
-                    def buildUrl    = env.BUILD_URL
-
-                    sh """
-                        ${PYTHON} scripts/notificar.py \
-                            --status  '${buildStatus}' \
-                            --job     '${jobName}' \
-                            --build   '${buildNumber}' \
-                            --url     '${buildUrl}'
-                    """
+                    sh 'python3 scripts/notificar.py'
                 }
             }
         }

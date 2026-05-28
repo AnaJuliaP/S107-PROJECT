@@ -36,6 +36,7 @@ gerenciador-tarefas-academicas/
 │   └── test_main_integration.py # Testes de integração (CLI / main)
 ├── Dockerfile                  # Imagem local (Python 3.12 slim)
 ├── Jenkinsfile                 # Pipeline Jenkins (testes, build, Docker Hub)
+├── Dockerfile.jenkins          # Imagem opcional do Jenkins com Python, pip e cliente Docker
 ├── main.py                     # Interface via terminal
 ├── notificar.py                # Script de notificação do pipeline
 ├── requirements.txt            # Dependências do projeto
@@ -121,7 +122,8 @@ O `Jenkinsfile` segue a ordem: **Checkout → Instalar Deps → Testes → Build
 1. **Docker Hub**: crie o repositório público (ou privado) `s107-project` na conta `leticialm`, se ainda não existir.
 2. **Access Token** no Hub: *Account Settings → Security → New Access Token* (não use a senha da conta).
 3. **Jenkins**
-   - Agente com **Docker** instalado e permissão de `docker build` / `docker push` (em laboratório costuma ser um agente Linux com Docker ou socket montado).
+   - O job roda como usuário **sem root**: **não** use `apt-get` dentro do `Jenkinsfile`. Dependências de sistema (Python, pip, cliente Docker) devem estar na **imagem do Jenkins** (ex.: `Dockerfile.jenkins` na raiz: `docker build -f Dockerfile.jenkins -t jenkins-custom .`).
+   - Agente com **`docker`** no `PATH` e acesso ao daemon (ex.: montar `/var/run/docker.sock` do host no container do Jenkins, e usuário `jenkins` com permissão nesse socket).
    - **Credencial** (*Manage Jenkins → Credentials*):
      - Tipo: **Username with password**
      - Usuário: seu usuário Docker Hub (`leticialm`)
