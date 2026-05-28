@@ -25,7 +25,7 @@ def main():
 Pipeline finalizado.
 
 Repositório: {job_name}
-Build: {build_status}
+Build Tag: {build_status}
 Build Number: {build_number}
 Execução: {build_url}
 """.strip()

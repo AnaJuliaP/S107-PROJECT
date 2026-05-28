@@ -7,8 +7,6 @@ services:
     environment:
       SMTP_HOST: mailhog
       SMTP_PORT: 1025
-      EMAIL_REMETENTE: ${EMAIL_REMETENTE}
-      EMAIL_DESTINO: ${EMAIL_DESTINO}
     container_name: jenkins
     restart: on-failure
     ports:
