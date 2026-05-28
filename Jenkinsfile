@@ -76,7 +76,6 @@ pipeline {
                         set -e
                         echo \$DOCKER_TOKEN | docker login -u \$DOCKER_USER --password-stdin
                         docker build \\
-                            -t ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} \\
                             -t ${env.DOCKER_IMAGE}:latest \\
                             .
                         docker push ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}
