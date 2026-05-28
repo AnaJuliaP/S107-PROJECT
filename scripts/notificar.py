@@ -2,7 +2,6 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import sys
 
 
 def main():
@@ -12,9 +11,10 @@ def main():
     
     build_status = os.getenv("STATUS_BUILD", "desconhecido")
     build_tag = os.getenv("BUILD_TAG", "desconhecido")
-    job_name = os.getenv("JOB_NAME", "desconecido")
     build_number = os.getenv("BUILD_NUMBER", "desconecido")
     build_url = os.getenv("BUILD_URL", "desconhecido")
+    build_id = os.getenv("BUILD_ID", "desconhecido")
+    job_name = os.getenv("JOB_NAME", "desconecido")
 
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = os.getenv("SMTP_PORT")
@@ -25,11 +25,12 @@ def main():
     corpo = f"""
 Pipeline finalizado.
 
-Repositório: {job_name}
 Build Status: {build_status}
 Build Tag: {build_tag}
 Build Number: {build_number}
-Execução: {build_url}
+Build ID: {build_id}
+Build URL: {build_url}
+Job Name: {job_name}
 """.strip()
 
     if not all([smtp_host, smtp_port, email_remetente, email_destino]):
