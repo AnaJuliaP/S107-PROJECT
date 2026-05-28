@@ -8,7 +8,6 @@ pipeline {
         DOCKER_HUB_CREDENTIAL_ID = 'docker-hub-leticialm'
         EMAIL_REMETENTE            = credential('EMAIL_REMETENTE')
         EMAIL_DESTINO              = credential('EMAIL_DESTINO')
-        STATUS_BUILD               = ${currentBuild.currentResult}
     }
 
     stages {
