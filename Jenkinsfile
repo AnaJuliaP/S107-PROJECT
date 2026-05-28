@@ -6,8 +6,8 @@ pipeline {
         PYTHON                   = 'python3'
         DOCKER_IMAGE             = 'leticialm/s107-project'
         DOCKER_HUB_CREDENTIAL_ID = 'docker-hub-leticialm'
-        EMAIL_REMETENTE            = credential('EMAIL_REMETENTE')
-        EMAIL_DESTINO              = credential('EMAIL_DESTINO')
+        EMAIL_REMETENTE            = credentials('EMAIL_REMETENTE')
+        EMAIL_DESTINO              = credentials('EMAIL_DESTINO')
     }
 
     stages {
