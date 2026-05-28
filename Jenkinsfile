@@ -64,14 +64,15 @@ pipeline {
             }
         }
 
-        stage('Notificação') 
-        {
-            steps 
-            {
+        stage('Notificação') {
+            steps {
+                withEnv([
+                    "STATUS_BUILD=${currentBuild.currentResult}",
+                ]) {
                     sh 'python3 scripts/notificar.py'
                 }
-            
-        }
+    }
+}
     }
 
     post {
