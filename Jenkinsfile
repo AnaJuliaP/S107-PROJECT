@@ -5,7 +5,7 @@ pipeline {
 
         PYTHON                   = 'python3'
         DOCKER_IMAGE             = 'leticialm/s107-project'
-        DOCKER_HUB_CREDENTIAL_ID = 'docker-hub-leticialm'
+        DOCKER_HUB_CREDENTIAL_ID = 'docker-hub-gustavos23'
         EMAIL_REMETENTE            = credentials('EMAIL_REMETENTE')
         EMAIL_DESTINO              = credentials('EMAIL_DESTINO')
     }
@@ -63,17 +63,45 @@ pipeline {
             }
         }
 
-        stage('Notificação') {
+        stage('Docker Build e Push') {
             steps {
-                script {
-                    env.STATUS_BUILD = "${currentBuild.currentResult}"
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: env.DOCKER_HUB_CREDENTIAL_ID,
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_TOKEN'
+                    )
+                ]) {
+                    sh """
+                        set -e
+                        echo \$DOCKER_TOKEN | docker login -u \$DOCKER_USER --password-stdin
+                        docker build \\
+                            -t ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} \\
+                            -t ${env.DOCKER_IMAGE}:latest \\
+                            .
+                        docker push ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}
+                        docker push ${env.DOCKER_IMAGE}:latest
+                        docker logout || true
+                    """
                 }
-                sh 'python3 scripts/notificar.py'
+            }
+        }
+
+        stage('Notificação') 
+        {
+            steps 
+            {
+                withEnv([
+                    "STATUS_BUILD=${currentBuild.currentResult}",
+                ]) {
+                    sh 'python3 scripts/notificar.py'
+                }
             }
         }
     }
 
-    post {
+    post 
+    {
         always {
             echo "Pipeline encerrado | Status: ${currentBuild.currentResult}"
         }

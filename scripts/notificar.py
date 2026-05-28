@@ -12,7 +12,6 @@ def main():
     build_status = os.getenv("STATUS_BUILD", "desconhecido")
     build_tag = os.getenv("BUILD_TAG", "desconhecido")
     build_number = os.getenv("BUILD_NUMBER", "desconecido")
-    build_url = os.getenv("BUILD_URL", "desconhecido")
     build_id = os.getenv("BUILD_ID", "desconhecido")
     job_name = os.getenv("JOB_NAME", "desconecido")
 
@@ -29,7 +28,6 @@ Build Status: {build_status}
 Build Tag: {build_tag}
 Build Number: {build_number}
 Build ID: {build_id}
-Build URL: {build_url}
 Job Name: {job_name}
 """.strip()
 
