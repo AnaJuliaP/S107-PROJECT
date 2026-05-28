@@ -1,18 +1,18 @@
-FROM jenkins/jenkins:lts-jdk21-slim
+FROM jenkins/jenkins:lts-jdk21
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 USER root
 
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-        python3 \
-        python3-pip \
-        python3-venv \
-        curl \
-        ca-certificates \
-        gnupg \
-        lsb-release \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    git \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    python3 \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
 RUN curl -fsSL https://download.docker.com/linux/debian/gpg \
@@ -28,13 +28,13 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg \
 
 RUN groupadd -f docker && usermod -aG docker jenkins
 
-RUN python3 -m pip install --upgrade pip setuptools wheel && \
-    python3 -m pip install --break-system-packages --no-cache-dir \
-        pytest \
-        pytest-cov \
-        pytest-html \
-        build
+COPY requirements.txt /tmp/requirements.txt
+# Não fazer "pip install --upgrade wheel": o wheel vem do apt (Debian) e o pip não consegue desinstalá-lo.
+RUN python3 -m pip install --break-system-packages --no-cache-dir -r /tmp/requirements.txt \
+    && rm -f /tmp/requirements.txt
+
+RUN command -v docker >/dev/null && docker --version && python3 --version
 
 USER jenkins
 
-ENV JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+ENV PATH="/usr/local/bin:/usr/bin:/bin:${PATH}"
