@@ -10,7 +10,7 @@ def main():
     # TODO (Integrante 2): Remover as variaveis do GitHub abaixo e substituir pelas do Jenkins
     # (ex: JOB_NAME, BUILD_NUMBER, BUILD_URL) pois o professor proibiu o uso de GitHub Actions.
     
-    build_status = os.getenv("STATUS_BUILD", "desconhecido")
+    build_status = os.getenv("BUILD_TAG", "desconhecido")
     job_name = os.getenv("JOB_NAME", "desconecido")
     build_number = os.getenv("BUILD_NUMBER", "desconecido")
     build_url = os.getenv("BUILD_URL", "desconecido")
