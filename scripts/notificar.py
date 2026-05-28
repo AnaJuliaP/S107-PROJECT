@@ -10,10 +10,11 @@ def main():
     # TODO (Integrante 2): Remover as variaveis do GitHub abaixo e substituir pelas do Jenkins
     # (ex: JOB_NAME, BUILD_NUMBER, BUILD_URL) pois o professor proibiu o uso de GitHub Actions.
     
-    build_status = os.getenv("BUILD_TAG", "desconhecido")
+    build_status = os.getenv("STATUS_BUILD", "desconhecido")
+    build_tag = os.getenv("BUILD_TAG", "desconhecido")
     job_name = os.getenv("JOB_NAME", "desconecido")
     build_number = os.getenv("BUILD_NUMBER", "desconecido")
-    build_url = os.getenv("BUILD_URL", "desconecido")
+    build_url = os.getenv("BUILD_URL", "desconhecido")
 
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = os.getenv("SMTP_PORT")
@@ -25,7 +26,8 @@ def main():
 Pipeline finalizado.
 
 Repositório: {job_name}
-Build Tag: {build_status}
+Build Status: {build_status}
+Build Tag: {build_tag}
 Build Number: {build_number}
 Execução: {build_url}
 """.strip()
