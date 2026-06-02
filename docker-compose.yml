@@ -24,6 +24,10 @@ services:
   app:
     image: leticialm/s107-project:latest
     container_name: app
+    environment:
+      - DATABASE_PATH=data/tarefas.json
+    volumes:
+      - ./data:/app/data
     networks:
       - devops-network
 
@@ -43,6 +47,8 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: tarefas
+    volumes:
+      - db_data:/var/lib/postgresql/data
     networks:
       - devops-network
 
@@ -54,3 +60,4 @@ networks:
 
 volumes:
   jenkins_home:
+  db_data:
