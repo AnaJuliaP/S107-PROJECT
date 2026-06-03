@@ -344,12 +344,35 @@ Usada em sessão contínua de debug do pipeline, cobrindo desde o erro inicial d
 
 ### Para quê foi usada - Gustavo:
 
+- Entendimento da estrutura do Jenkins Pipeline e funcionamento do CI/CD
+- Integração do Jenkins com repositório GitHub e execução por branch específica
+- Configuração de variáveis de ambiente e credentials no Jenkins
+- Debug de erros relacionados a Docker, Jenkins, SMTP e variáveis de ambiente
+- Ajustes no `docker-compose.yml` para comunicação entre containers
+
 ### Exemplos reais de prompts
  
 **Prompts:**
 
+**Prompt 1:**
+> "Agora tem esse erro: RUN python3 -m pip install --break-system-packages --upgrade pip setuptools wheel..."
+
+Resposta aceita: a IA identificou conflito entre pacotes instalados pelo Debian (`wheel`) e o `pip`, explicando como remover o upgrade problemático no Dockerfile.
+
+
+**Prompt 2:**
+> "Tem como eu testar se o email tá funcionando?"
+
+Resposta aceita: a IA orientou a utilizar MailHog para validar o envio SMTP localmente dentro do Docker Compose, explicando o acesso via navegador (`localhost:8025`).
+
+
+**Prompt 3:**
+> "Chat, está sendo gerado duas imagens, como arrumo?"
+
+Resposta aceita: a IA explicou a diferença entre múltiplas tags (`latest` e `${BUILD_NUMBER}`) e múltiplas imagens Docker, além de orientar sobre versionamento de imagens.
+
 ### Dinâmica de uso
----
+Utilizada como suporte contínuo durante o desenvolvimento do pipeline CI/CD, atuando como auxílio técnico para configuração do Jenkins, Docker Compose, integração com Docker Hub, variáveis de ambiente, notificações SMTP e resolução de erros de infraestrutura e automação.
 
 
 ### O que não foi feito por IA
