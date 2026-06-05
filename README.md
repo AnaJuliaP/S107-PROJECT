@@ -163,7 +163,7 @@ O `Jenkinsfile` executa automaticamente as seguintes etapas:
 |---|---|
 | Checkout | Clona o repositório do GitHub |
 | Instalar Dependências | Instala pytest, pytest-cov, pytest-html e build |
-| Testes | Roda 44 testes com cobertura, gera `report.html` e `coverage.xml` |
+| Testes | Roda 49 testes com cobertura, gera `report.html` e `coverage.xml` |
 | Build | Empacota o projeto com `python -m build`, gera `.whl` e `.tar.gz` |
 | Docker Build e Push | Builda e publica a imagem no Docker Hub com tags `latest` e `{BUILD_NUMBER}` |
 | Notificação | Envia e-mail com o status do pipeline via Mailhog |
