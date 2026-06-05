@@ -323,13 +323,48 @@ Usada em sessão contínua de debug do pipeline, cobrindo desde o erro inicial d
 
 
 ### Para quê foi usada - Vitoria:
+- Apoio para entender e organizar os requisitos de redes no docker-compose.yml
+- Explicação sobre como separar redes no Docker Compose sem alterar toda a estrutura já existente do projeto
+- Validação se o projeto ainda cumpria os requisitos mínimos da atividade, como:
+      - mínimo de 4 containers
+      - comunicação entre containers
+      - uso de Dockerfile local
+      - uso de imagens do Docker Hub
+      - uso de volumes
+      - uso de networks
+- Auxílio para compreender a diferença entre uma rede única e redes separadas por responsabilidade
+- Apoio na formulação de explicações técnicas para a defesa Q&A, principalmente sobre isolamento de containers, comunicação por hostname e uso do driver bridge
+- Revisão conceitual da configuração das redes, garantindo que o mailhog ficasse isolado dos serviços que não precisavam acessá-lo
 
 ### Exemplos reais de prompts
  
-**Prompts:**
+**Prompt 1:**
+
+>"No meu docker-compose.yml já existe uma rede principal. Como eu posso adicionar uma rede separada apenas para o Mailhog sem alterar o restante da estrutura?"
+
+Resposta aceita: a IA explicou que seria possível manter a rede principal já existente e adicionar uma segunda rede apenas para o serviço de e-mail. A sugestão foi usada como referência para organizar melhor o isolamento entre os containers.
+
+**Prompt 2:**
+
+>"Com essa configuração de redes no Docker Compose, o projeto ainda atende aos requisitos de comunicação entre containers e uso de networks?"
+
+Resposta aceita: a IA ajudou a conferir os requisitos do projeto, explicando que a comunicação entre os containers continuava funcionando pela rede principal e que a rede adicional demonstrava separação de responsabilidades.
+
+**Prompt 3:**
+
+>"Como eu posso explicar na defesa a diferença entre deixar todos os containers em uma única rede e separar serviços por responsabilidade?"
+
+Resposta aceita: a IA sugeriu uma explicação conceitual sobre isolamento de serviços, princípio de menor privilégio e comunicação entre containers apenas quando necessário. Essa explicação foi adaptada para a defesa do projeto.
+
+**Prompt 4:**
+
+>"No Docker Compose, os containers conseguem se comunicar pelo nome do serviço? Como posso explicar isso no README?"
+
+Resposta aceita: a IA explicou que, dentro da mesma network do Docker Compose, os serviços conseguem se comunicar usando o nome definido no docker-compose.yml como hostname. Essa explicação foi usada para melhorar a documentação técnica.
 
 ### Dinâmica de uso
 ---
+A IA foi utilizada como apoio durante a etapa de configuração e entendimento do docker-compose.yml, principalmente na parte de redes entre containers. O uso ocorreu de forma orientada por dúvidas pontuais: primeiro foi analisado se a configuração atual atendia aos requisitos, depois foram discutidas melhorias para separar responsabilidades entre as redes e, por fim, foram elaboradas explicações para a defesa do projeto.
 
 
 ### Para quê foi usada - Lucas:
