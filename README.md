@@ -210,8 +210,8 @@ docker run --rm -it leticialm/s107-project:latest
 - **Claude Sonnet (Anthropic)** — Lilyan
 - **Claude (Anthropic) — via claude.ai** — Ana Julia
 - **Claude (Anthropic) — via claude.ai** — Letícia
+- **Gemini 1.5 Pro (Google)** — Lucas
 - **[PREENCHER]** — Vitória
-- **[PREENCHER]** — Lucas
 - **[PREENCHER]** — Gustavo
 
 ---
@@ -334,11 +334,30 @@ Usada em sessão contínua de debug do pipeline, cobrindo desde o erro inicial d
 
 ### Para quê foi usada - Lucas:
 
+- **Arquitetura de Persistência:** Definição da estratégia de volumes no `docker-compose.yml` para garantir que os dados da aplicação (`tarefas.json`) não sejam perdidos ao derrubar os containers.
+- **Configuração de Statefullness no Jenkins:** Implementação de volumes nomeados para preservar o diretório `/var/jenkins_home`, garantindo que plugins e jobs configurados pelo grupo sobrevivam a reinicializações.
+- **Mapeamento de Bind Mounts:** Configuração técnica para espelhar a pasta local `./data` para dentro do container da aplicação, facilitando a depuração e o backup manual dos dados.
+- **Resolução de Erros de I/O:** Uso de IA para debugar permissões de escrita em volumes Docker rodando em sistemas Windows (WSL2/Docker Desktop).
+
 ### Exemplos reais de prompts
  
-**Prompts:**
+**Prompt 1:**
+> "Como configurar um volume no docker-compose que aponte para uma pasta local específica para que eu possa ver o arquivo tarefas.json sendo atualizado em tempo real?"
+ 
+Resposta aceita: A IA sugeriu o uso de Bind Mounts (`./data:/app/data`) em vez de Named Volumes, explicando a diferença de visibilidade entre os dois.
+ 
+**Prompt 2:**
+> "O Jenkins perde todas as configurações toda vez que eu dou um 'docker compose down'. Como criar um volume nomeado para persistir o estado dele?"
+ 
+Resposta aceita: A IA forneceu a sintaxe correta da seção `volumes:` no topo do arquivo e o mapeamento correto para `/var/jenkins_home`.
+
+**Prompt 3:**
+> "Como garantir que o container da aplicação tenha permissão de escrita no volume criado, considerando que estou usando Docker Desktop no Windows?"
+ 
+Resposta aceita: Orientações sobre como o Docker lida com o sistema de arquivos 9P e permissões automáticas, evitando erros de 'Permission Denied' no Python.
 
 ### Dinâmica de uso
+Atuação focada na robustez da infraestrutura, utilizando a IA para validar decisões de design de volumes e acelerar a resolução de conflitos entre o sistema de arquivos local e o ambiente containerizado.
 ---
 
 
