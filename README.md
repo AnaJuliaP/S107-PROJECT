@@ -207,7 +207,7 @@ docker run --rm -it leticialm/s107-project:latest
  
 ### Modelos utilizados
  
-- **Claude Sonnet (Anthropic)** — Lilyan
+- **Claude (Anthropic) — via claude.ai**— Lilyan
 - **Claude (Anthropic) — via claude.ai** — Ana Julia
 - **Claude (Anthropic) — via claude.ai** — Letícia
 - **Gemini 1.5 Pro (Google)** — Lucas
