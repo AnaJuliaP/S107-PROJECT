@@ -128,14 +128,58 @@ Clique em **Novo tarefa → Pipeline**, configure:
 - **Branch:** `*/main`
 - **Script Path:** `Jenkinsfile`
 Clique em **Construir agora** para rodar o pipeline.
+
+### 6. Visualizando os e-mails
+
+O projeto utiliza o MailHog como servidor SMTP para testes.
+
+Após a execução da pipeline, as notificações enviadas podem ser visualizadas através da interface web:
+
+```bash
+http://localhost:8025
+```
+
+O MailHog captura todos os e-mails enviados pelo pipeline sem necessidade de utilizar um servidor SMTP real, permitindo validar o funcionamento da etapa de notificação de forma segura durante os testes.
+
  
-### 6. Para parar os containers
+### 7. Para parar os containers
  
 ```bash
 docker compose down
 ```
  
 > ⚠️ Use `docker compose down -v` apenas se quiser apagar todos os dados e começar do zero.
+
+## Persistência de Dados
+
+O projeto utiliza volumes Docker para garantir a persistência das informações mesmo após a remoção dos containers.
+
+Os seguintes dados permanecem armazenados:
+
+* Configurações do Jenkins
+* Usuários criados no Jenkins
+* Jobs/Pipelines configurados
+* Credenciais cadastradas
+* Dados da aplicação
+
+### Testando a persistência
+
+Execute:
+
+docker compose down
+
+Em seguida:
+
+docker compose up -d
+
+Ao acessar novamente o Jenkins, as configurações previamente cadastradas devem continuar disponíveis.
+
+Para remover completamente os dados persistidos e reiniciar o ambiente do zero:
+
+docker compose down -v
+
+⚠️ Este comando remove também os volumes Docker associados ao projeto.
+
  
 ---
  
@@ -169,6 +213,7 @@ O `Jenkinsfile` executa automaticamente as seguintes etapas:
 | Notificação | Envia e-mail com o status do pipeline via Mailhog |
  
 Os artefatos gerados (relatório de testes, cobertura e pacote) ficam disponíveis no Jenkins para download.
+Esses artefatos são armazenados automaticamente pela pipeline para fins de auditoria, rastreabilidade e validação dos resultados.
  
 ---
  
