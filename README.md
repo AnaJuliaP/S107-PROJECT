@@ -212,7 +212,7 @@ docker run --rm -it leticialm/s107-project:latest
 - **Claude (Anthropic) — via claude.ai** — Letícia
 - **Gemini 1.5 Pro (Google)** — Lucas
 - **[PREENCHER]** — Vitória
-- **[PREENCHER]** — Gustavo
+- **ChatGPT** — Gustavo
 
 ---
 
