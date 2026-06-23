@@ -1,7 +1,48 @@
+import json
+import os
+
 class GerenciadorTarefas:
-    def __init__(self):
+    def __init__(self, arquivo_dados=None):
+        # Prioridade: argumento > variável de ambiente > None (apenas memória)
+        self.arquivo_dados = arquivo_dados or os.getenv("DATABASE_PATH")
         self.tarefas = {}
         self.proximo_id = 1
+        
+        if self.arquivo_dados:
+            self._carregar_dados()
+
+    def _carregar_dados(self):
+        if not self.arquivo_dados or not os.path.exists(self.arquivo_dados):
+            return
+            
+        try:
+            with open(self.arquivo_dados, 'r', encoding='utf-8') as f:
+                dados = json.load(f)
+                # JSON armazena chaves como string, convertemos de volta para int
+                self.tarefas = {int(k): v for k, v in dados.get("tarefas", {}).items()}
+                self.proximo_id = dados.get("proximo_id", 1)
+        except (json.JSONDecodeError, Exception) as e:
+            print(f"Erro ao carregar dados de {self.arquivo_dados}: {e}")
+            self.tarefas = {}
+            self.proximo_id = 1
+
+    def _salvar_dados(self):
+        if not self.arquivo_dados:
+            return
+
+        # Garante que o diretório existe
+        diretorio = os.path.dirname(self.arquivo_dados)
+        if diretorio:
+            os.makedirs(diretorio, exist_ok=True)
+            
+        try:
+            with open(self.arquivo_dados, 'w', encoding='utf-8') as f:
+                json.dump({
+                    "tarefas": self.tarefas,
+                    "proximo_id": self.proximo_id
+                }, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"Erro ao salvar dados em {self.arquivo_dados}: {e}")
 
     def criar_tarefa(self, titulo, disciplina, descricao, prioridade, prazo):
         if not titulo or titulo.strip() == "":
@@ -26,7 +67,8 @@ class GerenciadorTarefas:
         id_tarefa = self.proximo_id
         self.tarefas[id_tarefa] = tarefa
         self.proximo_id += 1
-
+        
+        self._salvar_dados()
         return id_tarefa
 
     def buscar_tarefa(self, id_tarefa):
@@ -65,12 +107,15 @@ class GerenciadorTarefas:
 
         if prazo is not None:
             tarefa["prazo"] = prazo
+        
+        self._salvar_dados()
 
     def remover_tarefa(self, id_tarefa):
         if id_tarefa not in self.tarefas:
             raise ValueError("Tarefa não encontrada")
 
         del self.tarefas[id_tarefa]
+        self._salvar_dados()
 
     def concluir_tarefa(self, id_tarefa):
         if id_tarefa not in self.tarefas:
@@ -80,6 +125,7 @@ class GerenciadorTarefas:
             raise ValueError("Tarefa já está concluída")
 
         self.tarefas[id_tarefa]["status"] = "concluida"
+        self._salvar_dados()
 
     def filtrar_por_disciplina(self, disciplina):
         return {

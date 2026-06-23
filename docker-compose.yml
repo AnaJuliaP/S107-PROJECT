@@ -19,10 +19,17 @@ services:
     - "0"
     networks:
       - devops-network
+      - mailhog-network
 
   app:
     image: leticialm/s107-project:latest
+    stdin_open: true
+    tty: true
     container_name: app
+    environment:
+      - DATABASE_PATH=data/tarefas.json
+    volumes:
+      - ./data:/app/data
     networks:
       - devops-network
 
@@ -33,7 +40,7 @@ services:
       - "1025:1025"
       - "8025:8025"
     networks:
-      - devops-network
+      - mailhog-network
 
   db:
     image: postgres:15
@@ -42,12 +49,17 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: tarefas
+    volumes:
+      - db_data:/var/lib/postgresql/data
     networks:
       - devops-network
 
 networks:
   devops-network:
     driver: bridge
+  mailhog-network:
+    driver: bridge
 
 volumes:
   jenkins_home:
+  db_data:
