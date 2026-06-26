@@ -1,17 +1,17 @@
 pipeline {
     agent any
-
+ 
     environment {
-
+ 
         PYTHON                   = 'python3'
         DOCKER_IMAGE             = 'leticialm/s107-project'
         DOCKER_HUB_CREDENTIAL_ID = 'docker-hub-leticialm'
         EMAIL_REMETENTE            = credentials('EMAIL_REMETENTE')
         EMAIL_DESTINO              = credentials('EMAIL_DESTINO')
     }
-
+ 
     stages {
-    
+   
         stage('Instalar Dependências do Projeto') {
             steps {
                 sh '''
@@ -24,7 +24,7 @@ pipeline {
                 '''
             }
         }
-
+ 
         stage('Testes') {
             steps {
                 sh '''
@@ -45,7 +45,7 @@ pipeline {
                 }
             }
         }
-
+ 
         stage('Build') {
             steps {
                 sh 'python3 -m build'
@@ -57,7 +57,7 @@ pipeline {
                 }
             }
         }
-
+ 
         stage('Docker Build e Push') {
             steps {
                 withCredentials([
@@ -71,6 +71,7 @@ pipeline {
                         set -e
                         echo \$DOCKER_TOKEN | docker login -u \$DOCKER_USER --password-stdin
                         docker build \\
+                            -f Dockerfile.jenkins \\
                             -t ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} \\
                             -t ${env.DOCKER_IMAGE}:latest \\
                             .
@@ -81,10 +82,10 @@ pipeline {
                 }
             }
         }
-
-        stage('Notificação') 
+ 
+        stage('Notificação')
         {
-            steps 
+            steps
             {
                 withEnv([
                     "STATUS_BUILD=${currentBuild.currentResult}",
@@ -94,8 +95,8 @@ pipeline {
             }
         }
     }
-
-    post 
+ 
+    post
     {
         always {
             echo "Pipeline encerrado | Status: ${currentBuild.currentResult}"
