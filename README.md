@@ -83,8 +83,8 @@ docker compose up --build
 ```
  
 Isso irá subir os 4 containers:
-- **jenkins** — servidor CI/CD na porta `http://localhost:8080`
-- **app** — a aplicação Python (imagem do Docker Hub)
+- **jenkins** — servidor CI/CD (imagem do Docker Hub, gerada pelo `Dockerfile.jenkins`)
+- **app** — a aplicação Python (build local com `Dockerfile`)
 - **mailhog** — servidor de e-mail fake na porta `http://localhost:8025`
 - **db** — banco de dados PostgreSQL
 
@@ -209,7 +209,7 @@ O `Jenkinsfile` executa automaticamente as seguintes etapas:
 | Instalar Dependências | Instala pytest, pytest-cov, pytest-html e build |
 | Testes | Roda 49 testes com cobertura, gera `report.html` e `coverage.xml` |
 | Build | Empacota o projeto com `python -m build`, gera `.whl` e `.tar.gz` |
-| Docker Build e Push | Builda e publica a imagem no Docker Hub com tags `latest` e `{BUILD_NUMBER}` |
+| Docker Build e Push | Builda o `Dockerfile.jenkins` e publica a imagem do Jenkins no Docker Hub com tags `latest` e `{BUILD_NUMBER}` |
 | Notificação | Envia e-mail com o status do pipeline via Mailhog |
  
 Os artefatos gerados (relatório de testes, cobertura e pacote) ficam disponíveis no Jenkins para download.
@@ -220,10 +220,12 @@ Esses artefatos são armazenados automaticamente pela pipeline para fins de audi
 ## 🐳 Docker Hub
  
 Imagem publicada pelo pipeline: [`leticialm/s107-project`](https://hub.docker.com/r/leticialm/s107-project)
- 
+
+> Esta imagem é o **Jenkins customizado** (`Dockerfile.jenkins`), não a aplicação Python. A app é buildada localmente pelo serviço `app` no `docker-compose.yml`.
+
 ```bash
 docker pull leticialm/s107-project:latest
-docker run --rm -it leticialm/s107-project:latest
+docker run --rm -p 8080:8080 leticialm/s107-project:latest
 ```
  
 ---
