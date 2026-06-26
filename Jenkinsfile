@@ -77,6 +77,8 @@ pipeline {
                             .
                         docker push ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER}
                         docker push ${env.DOCKER_IMAGE}:latest
+                        echo "Imagem publicada: ${env.DOCKER_IMAGE}:${env.BUILD_NUMBER} (Dockerfile.jenkins)"
+                        docker image inspect ${env.DOCKER_IMAGE}:latest --format='Digest: {{index .RepoDigests 0}}'
                         docker logout || true
                     """
                 }
