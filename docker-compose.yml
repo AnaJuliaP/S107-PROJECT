@@ -1,6 +1,7 @@
 services:
 
   jenkins:
+    image: leticialm/s107-project:latest
     build:
       context: .
       dockerfile: Dockerfile.jenkins
@@ -22,9 +23,11 @@ services:
       - mailhog-network
 
   app:
-    image: leticialm/s107-project:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     stdin_open: true
-    tty: true
+    tty: true  
     container_name: app
     environment:
       - DATABASE_PATH=data/tarefas.json
