@@ -26,6 +26,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    stdin_open: true
+    tty: true  
     container_name: app
     environment:
       - DATABASE_PATH=data/tarefas.json
