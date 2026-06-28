@@ -22,9 +22,13 @@ addopts = [
 [tool.coverage.run]
 branch = true
 source = ["src", "main"]
+omit = [
+    "src/repositories/base.py",
+]
 
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
 ]
+

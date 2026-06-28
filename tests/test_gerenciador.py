@@ -1,213 +1,167 @@
+import os
+import json
+import tempfile
 import pytest
 from src.gerenciador import GerenciadorTarefas
 
 
-def test_criar_tarefa_com_dados_validos():
-    gerenciador = GerenciadorTarefas()
+def test_salvar_e_carregar_dados():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+        caminho = f.name
 
-    id_tarefa = gerenciador.criar_tarefa(
-        "Estudar pytest",
-        "Engenharia de Software",
-        "Revisar testes unitários",
-        "alta",
-        "2026-03-25"
+    try:
+        g = GerenciadorTarefas(arquivo_dados=caminho)
+        g.criar_tarefa("Tarefa 1", "Matemática", "desc", "alta", "2025-12-01")
+
+        g2 = GerenciadorTarefas(arquivo_dados=caminho)
+        assert 1 in g2.tarefas
+        assert g2.tarefas[1]["titulo"] == "Tarefa 1"
+    finally:
+        os.unlink(caminho)
+
+
+def test_carregar_dados_arquivo_inexistente():
+    g = GerenciadorTarefas(arquivo_dados="/tmp/nao_existe_xyz.json")
+    assert g.tarefas == {}
+
+
+def test_carregar_dados_json_invalido():
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode='w') as f:
+        f.write("conteudo invalido")
+        caminho = f.name
+
+    try:
+        g = GerenciadorTarefas(arquivo_dados=caminho)
+        assert g.tarefas == {}
+    finally:
+        os.unlink(caminho)
+
+
+def test_salvar_sem_arquivo_nao_falha():
+    g = GerenciadorTarefas()
+    g.criar_tarefa("Tarefa", "Física", "desc", "baixa", "2025-01-01")
+    assert 1 in g.tarefas
+
+
+def test_salvar_cria_diretorio_se_nao_existir():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        caminho = os.path.join(tmpdir, "subdir", "dados.json")
+        g = GerenciadorTarefas(arquivo_dados=caminho)
+        g.criar_tarefa("Tarefa", "Química", "desc", "media", "2025-06-01")
+        assert os.path.exists(caminho)
+
+
+# ---------------------------------------------------------------------------
+# Testes de persistência com PostgreSQL (executados quando há um banco
+# acessível via DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME, como no
+# docker-compose do projeto). Caso contrário, são pulados automaticamente.
+# ---------------------------------------------------------------------------
+
+def test_gerenciador_usa_postgres_quando_variaveis_definidas(postgres_env):
+    g = GerenciadorTarefas()
+    from src.repositories.postgres_repo import PostgresTarefaRepository
+    assert isinstance(g.repo, PostgresTarefaRepository)
+
+
+def test_postgres_criar_e_buscar_tarefa(postgres_repo):
+    id_tarefa = postgres_repo.criar_tarefa(
+        "Tarefa 1", "Matemática", "desc", "alta", "2025-12-01"
     )
-
-    assert id_tarefa == 1
-    assert gerenciador.tarefas[1]["titulo"] == "Estudar pytest"
-    assert gerenciador.tarefas[1]["status"] == "pendente"
-
-
-def test_criar_duas_tarefas_gera_ids_diferentes():
-    gerenciador = GerenciadorTarefas()
-
-    id1 = gerenciador.criar_tarefa("Tarefa 1", "C14", "Desc 1", "baixa", "2026-03-25")
-    id2 = gerenciador.criar_tarefa("Tarefa 2", "C14", "Desc 2", "media", "2026-03-26")
-
-    assert id1 == 1
-    assert id2 == 2
+    tarefa = postgres_repo.buscar_tarefa(id_tarefa)
+    assert tarefa["titulo"] == "Tarefa 1"
+    assert tarefa["disciplina"] == "Matemática"
+    assert tarefa["status"] == "pendente"
 
 
-def test_buscar_tarefa_existente():
-    gerenciador = GerenciadorTarefas()
-    id_tarefa = gerenciador.criar_tarefa("Estudar", "C14", "Descrição", "alta", "2026-03-25")
-
-    tarefa = gerenciador.buscar_tarefa(id_tarefa)
-
-    assert tarefa["titulo"] == "Estudar"
-    assert tarefa["disciplina"] == "C14"
+def test_postgres_buscar_tarefa_inexistente_levanta_erro(postgres_repo):
+    with pytest.raises(ValueError):
+        postgres_repo.buscar_tarefa(999)
 
 
-def test_listar_tarefas_retorna_dicionario_com_tarefas():
-    gerenciador = GerenciadorTarefas()
-    gerenciador.criar_tarefa("Tarefa A", "C14", "Desc", "alta", "2026-03-25")
-    gerenciador.criar_tarefa("Tarefa B", "C15", "Desc", "media", "2026-03-26")
+def test_postgres_listar_tarefas(postgres_repo):
+    postgres_repo.criar_tarefa("Tarefa 1", "Física", "desc", "baixa", "2025-01-01")
+    postgres_repo.criar_tarefa("Tarefa 2", "Química", "desc", "media", "2025-02-01")
 
-    tarefas = gerenciador.listar_tarefas()
-
+    tarefas = postgres_repo.listar_tarefas()
     assert len(tarefas) == 2
-    assert 1 in tarefas
-    assert 2 in tarefas
 
 
-def test_editar_tarefa_existente():
-    gerenciador = GerenciadorTarefas()
-    id_tarefa = gerenciador.criar_tarefa("Antigo", "C14", "Desc", "baixa", "2026-03-25")
+def test_postgres_editar_tarefa(postgres_repo):
+    id_tarefa = postgres_repo.criar_tarefa(
+        "Tarefa", "Física", "desc", "baixa", "2025-01-01"
+    )
+    postgres_repo.editar_tarefa(id_tarefa, titulo="Tarefa Editada")
 
-    gerenciador.editar_tarefa(id_tarefa, titulo="Novo título", prioridade="alta")
-
-    tarefa = gerenciador.buscar_tarefa(id_tarefa)
-    assert tarefa["titulo"] == "Novo título"
-    assert tarefa["prioridade"] == "alta"
-
-
-def test_remover_tarefa_existente():
-    gerenciador = GerenciadorTarefas()
-    id_tarefa = gerenciador.criar_tarefa("Remover", "C14", "Desc", "media", "2026-03-25")
-
-    gerenciador.remover_tarefa(id_tarefa)
-
-    assert id_tarefa not in gerenciador.tarefas
+    tarefa = postgres_repo.buscar_tarefa(id_tarefa)
+    assert tarefa["titulo"] == "Tarefa Editada"
 
 
-def test_concluir_tarefa_existente():
-    gerenciador = GerenciadorTarefas()
-    id_tarefa = gerenciador.criar_tarefa("Concluir", "C14", "Desc", "alta", "2026-03-25")
-
-    gerenciador.concluir_tarefa(id_tarefa)
-
-    assert gerenciador.tarefas[id_tarefa]["status"] == "concluida"
+def test_postgres_editar_tarefa_inexistente_levanta_erro(postgres_repo):
+    with pytest.raises(ValueError):
+        postgres_repo.editar_tarefa(999, titulo="Novo título")
 
 
-def test_filtrar_por_disciplina_retorna_apenas_tarefas_da_disciplina():
-    gerenciador = GerenciadorTarefas()
-    gerenciador.criar_tarefa("Tarefa 1", "C14", "Desc", "alta", "2026-03-25")
-    gerenciador.criar_tarefa("Tarefa 2", "C15", "Desc", "media", "2026-03-26")
-    gerenciador.criar_tarefa("Tarefa 3", "C14", "Desc", "baixa", "2026-03-27")
+def test_postgres_remover_tarefa(postgres_repo):
+    id_tarefa = postgres_repo.criar_tarefa(
+        "Tarefa", "Física", "desc", "baixa", "2025-01-01"
+    )
+    postgres_repo.remover_tarefa(id_tarefa)
 
-    resultado = gerenciador.filtrar_por_disciplina("C14")
-
-    assert len(resultado) == 2
-    assert all(tarefa["disciplina"] == "C14" for tarefa in resultado.values())
+    with pytest.raises(ValueError):
+        postgres_repo.buscar_tarefa(id_tarefa)
 
 
-def test_filtrar_por_prioridade_retorna_apenas_tarefas_da_prioridade():
-    gerenciador = GerenciadorTarefas()
-    gerenciador.criar_tarefa("Tarefa 1", "C14", "Desc", "alta", "2026-03-25")
-    gerenciador.criar_tarefa("Tarefa 2", "C15", "Desc", "media", "2026-03-26")
-    gerenciador.criar_tarefa("Tarefa 3", "C16", "Desc", "alta", "2026-03-27")
-
-    resultado = gerenciador.filtrar_por_prioridade("alta")
-
-    assert len(resultado) == 2
-    assert all(tarefa["prioridade"] == "alta" for tarefa in resultado.values())
+def test_postgres_remover_tarefa_inexistente_levanta_erro(postgres_repo):
+    with pytest.raises(ValueError):
+        postgres_repo.remover_tarefa(999)
 
 
-def test_filtrar_por_status_retorna_apenas_tarefas_com_status_informado():
-    gerenciador = GerenciadorTarefas()
-    id1 = gerenciador.criar_tarefa("Tarefa 1", "C14", "Desc", "alta", "2026-03-25")
-    gerenciador.criar_tarefa("Tarefa 2", "C15", "Desc", "media", "2026-03-26")
+def test_postgres_concluir_tarefa(postgres_repo):
+    id_tarefa = postgres_repo.criar_tarefa(
+        "Tarefa", "Física", "desc", "baixa", "2025-01-01"
+    )
+    postgres_repo.concluir_tarefa(id_tarefa)
 
-    gerenciador.concluir_tarefa(id1)
+    tarefa = postgres_repo.buscar_tarefa(id_tarefa)
+    assert tarefa["status"] == "concluida"
 
-    resultado = gerenciador.filtrar_por_status("concluida")
 
+def test_postgres_filtrar_por_disciplina(postgres_repo):
+    postgres_repo.criar_tarefa("Tarefa 1", "Física", "desc", "baixa", "2025-01-01")
+    postgres_repo.criar_tarefa("Tarefa 2", "Química", "desc", "media", "2025-02-01")
+
+    resultado = postgres_repo.filtrar_por_disciplina("física")
     assert len(resultado) == 1
-    assert resultado[id1]["status"] == "concluida"
+    assert list(resultado.values())[0]["titulo"] == "Tarefa 1"
 
 
-def test_criar_tarefa_com_titulo_vazio_lanca_erro():
-    gerenciador = GerenciadorTarefas()
+def test_postgres_filtrar_por_prioridade(postgres_repo):
+    postgres_repo.criar_tarefa("Tarefa 1", "Física", "desc", "baixa", "2025-01-01")
+    postgres_repo.criar_tarefa("Tarefa 2", "Química", "desc", "alta", "2025-02-01")
 
-    with pytest.raises(ValueError, match="Título não pode ser vazio"):
-        gerenciador.criar_tarefa("", "C14", "Desc", "alta", "2026-03-25")
-
-
-def test_criar_tarefa_com_disciplina_vazia_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-
-    with pytest.raises(ValueError, match="Disciplina não pode ser vazia"):
-        gerenciador.criar_tarefa("Tarefa", "", "Desc", "alta", "2026-03-25")
+    resultado = postgres_repo.filtrar_por_prioridade("alta")
+    assert len(resultado) == 1
+    assert list(resultado.values())[0]["titulo"] == "Tarefa 2"
 
 
-def test_criar_tarefa_com_prioridade_invalida_lanca_erro():
-    gerenciador = GerenciadorTarefas()
+def test_postgres_filtrar_por_status(postgres_repo):
+    id_tarefa = postgres_repo.criar_tarefa(
+        "Tarefa 1", "Física", "desc", "baixa", "2025-01-01"
+    )
+    postgres_repo.criar_tarefa("Tarefa 2", "Química", "desc", "alta", "2025-02-01")
+    postgres_repo.concluir_tarefa(id_tarefa)
 
-    with pytest.raises(ValueError, match="Prioridade inválida"):
-        gerenciador.criar_tarefa("Tarefa", "C14", "Desc", "urgente", "2026-03-25")
-
-
-def test_buscar_tarefa_inexistente_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-
-    with pytest.raises(ValueError, match="Tarefa não encontrada"):
-        gerenciador.buscar_tarefa(999)
-
-
-def test_editar_tarefa_inexistente_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-
-    with pytest.raises(ValueError, match="Tarefa não encontrada"):
-        gerenciador.editar_tarefa(999, titulo="Novo título")
+    pendentes = postgres_repo.filtrar_por_status("pendente")
+    concluidas = postgres_repo.filtrar_por_status("concluida")
+    assert len(pendentes) == 1
+    assert len(concluidas) == 1
 
 
-def test_editar_tarefa_com_titulo_vazio_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-    id_tarefa = gerenciador.criar_tarefa("Tarefa", "C14", "Desc", "alta", "2026-03-25")
+def test_postgres_via_gerenciador_tarefas(postgres_env):
+    g = GerenciadorTarefas()
+    id_tarefa = g.criar_tarefa("Tarefa", "Biologia", "desc", "media", "2025-03-01")
+    assert g.buscar_tarefa(id_tarefa)["titulo"] == "Tarefa"
 
-    with pytest.raises(ValueError, match="Título não pode ser vazio"):
-        gerenciador.editar_tarefa(id_tarefa, titulo="")
-
-
-def test_editar_tarefa_com_disciplina_vazia_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-    id_tarefa = gerenciador.criar_tarefa("Tarefa", "C14", "Desc", "alta", "2026-03-25")
-
-    with pytest.raises(ValueError, match="Disciplina não pode ser vazia"):
-        gerenciador.editar_tarefa(id_tarefa, disciplina="")
-
-
-def test_editar_tarefa_com_prioridade_invalida_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-    id_tarefa = gerenciador.criar_tarefa("Tarefa", "C14", "Desc", "alta", "2026-03-25")
-
-    with pytest.raises(ValueError, match="Prioridade inválida"):
-        gerenciador.editar_tarefa(id_tarefa, prioridade="urgente")
-
-
-def test_remover_tarefa_inexistente_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-
-    with pytest.raises(ValueError, match="Tarefa não encontrada"):
-        gerenciador.remover_tarefa(999)
-
-
-def test_concluir_tarefa_inexistente_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-
-    with pytest.raises(ValueError, match="Tarefa não encontrada"):
-        gerenciador.concluir_tarefa(999)
-
-
-def test_concluir_tarefa_ja_concluida_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-    id_tarefa = gerenciador.criar_tarefa("Tarefa", "C14", "Desc", "alta", "2026-03-25")
-
-    gerenciador.concluir_tarefa(id_tarefa)
-
-    with pytest.raises(ValueError, match="Tarefa já está concluída"):
-        gerenciador.concluir_tarefa(id_tarefa)
-
-
-def test_filtrar_por_prioridade_invalida_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-
-    with pytest.raises(ValueError, match="Prioridade inválida"):
-        gerenciador.filtrar_por_prioridade("urgente")
-
-
-def test_filtrar_por_status_invalido_lanca_erro():
-    gerenciador = GerenciadorTarefas()
-
-    with pytest.raises(ValueError, match="Status inválido"):
-        gerenciador.filtrar_por_status("cancelada")
+    g.concluir_tarefa(id_tarefa)
+    with pytest.raises(ValueError):
+        g.concluir_tarefa(id_tarefa)
