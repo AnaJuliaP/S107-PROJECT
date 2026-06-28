@@ -428,6 +428,8 @@ A IA foi utilizada como apoio durante a etapa de configuração e entendimento d
 - **Configuração de Statefullness no Jenkins:** Implementação de volumes nomeados para preservar o diretório `/var/jenkins_home`, garantindo que plugins e jobs configurados pelo grupo sobrevivam a reinicializações.
 - **Mapeamento de Bind Mounts:** Configuração técnica para espelhar a pasta local `./data` para dentro do container da aplicação, facilitando a depuração e o backup manual dos dados.
 - **Resolução de Erros de I/O:** Uso de IA para debugar permissões de escrita em volumes Docker rodando em sistemas Windows (WSL2/Docker Desktop).
+- **Resolução de Conflitos e Atualização do Repositório:** Uso de Git e IA para realizar pull do repositório remoto mesclando modificações locais e resolvendo conflitos do README.
+- **Modularização e Banco de Dados (PostgreSQL):** Modelagem e implementação do Repository Pattern para desacoplar as regras de negócios da persistência de banco de dados, criando classes distintas para repositórios JSON e PostgreSQL.
 
 ### Exemplos reais de prompts
  
@@ -440,11 +442,21 @@ Resposta aceita: A IA sugeriu o uso de Bind Mounts (`./data:/app/data`) em vez d
 > "O Jenkins perde todas as configurações toda vez que eu dou um 'docker compose down'. Como criar um volume nomeado para persistir o estado dele?"
  
 Resposta aceita: A IA forneceu a sintaxe correta da seção `volumes:` no topo do arquivo e o mapeamento correto para `/var/jenkins_home`.
-
+ 
 **Prompt 3:**
 > "Como garantir que o container da aplicação tenha permissão de escrita no volume criado, considerando que estou usando Docker Desktop no Windows?"
  
 Resposta aceita: Orientações sobre como o Docker lida com o sistema de arquivos 9P e permissões automáticas, evitando erros de 'Permission Denied' no Python.
+
+**Prompt 4:**
+> "pode mexer no conflito, mas dê a preferencia para o que está no github, após isso quero que você mapeie a adaptação do 'gerenciador.py' para usar o postgress"
+
+Resposta aceita: A IA mapeou o uso do driver `psycopg2` e propôs uma arquitetura robusta com fallback automático para JSON (mantendo os testes locais e no pipeline de CI intactos).
+
+**Prompt 5:**
+> "Estou vendo aqui o código parece ser extenso, não seria melhor modularizar essa proposta??"
+
+Resposta aceita: A IA sugeriu e detalhou a aplicação do Repository Pattern, separando as implementações de banco (PostgreSQL) e arquivo (JSON) em uma estrutura limpa sob o diretório `src/repositories/`.
 
 ### Dinâmica de uso
 Atuação focada na robustez da infraestrutura, utilizando a IA para validar decisões de design de volumes e acelerar a resolução de conflitos entre o sistema de arquivos local e o ambiente containerizado.

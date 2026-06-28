@@ -14,3 +14,4 @@ site/test-report.html
 .coverage
 htmlcov/
 .env
+data/

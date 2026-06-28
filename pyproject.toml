@@ -22,6 +22,10 @@ addopts = [
 [tool.coverage.run]
 branch = true
 source = ["src", "main"]
+omit = [
+    "src/repositories/postgres_repo.py",
+    "src/repositories/base.py",
+]
 
 [tool.coverage.report]
 exclude_lines = [

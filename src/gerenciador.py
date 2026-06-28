@@ -1,53 +1,41 @@
-import json
 import os
+from src.repositories.json_repo import JSONTarefaRepository
 
 class GerenciadorTarefas:
-    def __init__(self, arquivo_dados=None):
-        # Prioridade: argumento > variável de ambiente > None (apenas memória)
-        self.arquivo_dados = arquivo_dados or os.getenv("DATABASE_PATH")
-        self.tarefas = {}
-        self.proximo_id = 1
-        
-        if self.arquivo_dados:
-            self._carregar_dados()
+    def __init__(self, arquivo_dados=None, repo=None):
+        if repo is not None:
+            self.repo = repo
+        else:
+            # Decisão dinâmica de infraestrutura
+            db_host = os.getenv("DB_HOST")
+            db_user = os.getenv("DB_USER")
+            db_password = os.getenv("DB_PASSWORD")
+            db_name = os.getenv("DB_NAME")
 
-    def _carregar_dados(self):
-        if not self.arquivo_dados or not os.path.exists(self.arquivo_dados):
-            return
-            
-        try:
-            with open(self.arquivo_dados, 'r', encoding='utf-8') as f:
-                dados = json.load(f)
-                # JSON armazena chaves como string, convertemos de volta para int
-                self.tarefas = {int(k): v for k, v in dados.get("tarefas", {}).items()}
-                self.proximo_id = dados.get("proximo_id", 1)
-        except (json.JSONDecodeError, Exception) as e:
-            print(f"Erro ao carregar dados de {self.arquivo_dados}: {e}")
-            self.tarefas = {}
-            self.proximo_id = 1
+            usar_postgres = all([db_host, db_user, db_password, db_name])
 
-    def _salvar_dados(self):
-        if not self.arquivo_dados:
-            return
+            if usar_postgres:
+                # Import dinâmico para não quebrar ambientes de teste sem psycopg2
+                from src.repositories.postgres_repo import PostgresTarefaRepository
+                self.repo = PostgresTarefaRepository()
+            else:
+                self.repo = JSONTarefaRepository(arquivo_dados)
 
-        # Garante que o diretório existe
-        diretorio = os.path.dirname(self.arquivo_dados)
-        if diretorio:
-            os.makedirs(diretorio, exist_ok=True)
-            
-        try:
-            with open(self.arquivo_dados, 'w', encoding='utf-8') as f:
-                json.dump({
-                    "tarefas": self.tarefas,
-                    "proximo_id": self.proximo_id
-                }, f, indent=4, ensure_ascii=False)
-        except Exception as e:
-            print(f"Erro ao salvar dados em {self.arquivo_dados}: {e}")
+    @property
+    def tarefas(self):
+        if hasattr(self.repo, 'tarefas'):
+            return self.repo.tarefas
+        return {}
+
+    @property
+    def proximo_id(self):
+        if hasattr(self.repo, 'proximo_id'):
+            return self.repo.proximo_id
+        return 1
 
     def criar_tarefa(self, titulo, disciplina, descricao, prioridade, prazo):
         if not titulo or titulo.strip() == "":
             raise ValueError("Título não pode ser vazio")
-
         if not disciplina or disciplina.strip() == "":
             raise ValueError("Disciplina não pode ser vazia")
 
@@ -55,103 +43,48 @@ class GerenciadorTarefas:
         if prioridade not in prioridades_validas:
             raise ValueError("Prioridade inválida")
 
-        tarefa = {
-            "titulo": titulo,
-            "disciplina": disciplina,
-            "descricao": descricao,
-            "prioridade": prioridade,
-            "status": "pendente",
-            "prazo": prazo
-        }
-
-        id_tarefa = self.proximo_id
-        self.tarefas[id_tarefa] = tarefa
-        self.proximo_id += 1
-        
-        self._salvar_dados()
-        return id_tarefa
+        return self.repo.criar_tarefa(titulo, disciplina, descricao, prioridade, prazo)
 
     def buscar_tarefa(self, id_tarefa):
-        if id_tarefa not in self.tarefas:
-            raise ValueError("Tarefa não encontrada")
-
-        return self.tarefas[id_tarefa]
+        return self.repo.buscar_tarefa(id_tarefa)
 
     def listar_tarefas(self):
-        return self.tarefas
+        return self.repo.listar_tarefas()
 
     def editar_tarefa(self, id_tarefa, titulo=None, disciplina=None, descricao=None, prioridade=None, prazo=None):
-        if id_tarefa not in self.tarefas:
-            raise ValueError("Tarefa não encontrada")
-
-        tarefa = self.tarefas[id_tarefa]
-
-        if titulo is not None:
-            if titulo.strip() == "":
-                raise ValueError("Título não pode ser vazio")
-            tarefa["titulo"] = titulo
-
-        if disciplina is not None:
-            if disciplina.strip() == "":
-                raise ValueError("Disciplina não pode ser vazia")
-            tarefa["disciplina"] = disciplina
-
-        if descricao is not None:
-            tarefa["descricao"] = descricao
-
+        if titulo is not None and titulo.strip() == "":
+            raise ValueError("Título não pode ser vazio")
+        if disciplina is not None and disciplina.strip() == "":
+            raise ValueError("Disciplina não pode ser vazia")
         if prioridade is not None:
             prioridades_validas = ["baixa", "media", "alta"]
             if prioridade not in prioridades_validas:
                 raise ValueError("Prioridade inválida")
-            tarefa["prioridade"] = prioridade
 
-        if prazo is not None:
-            tarefa["prazo"] = prazo
-        
-        self._salvar_dados()
+        self.repo.editar_tarefa(id_tarefa, titulo, disciplina, descricao, prioridade, prazo)
 
     def remover_tarefa(self, id_tarefa):
-        if id_tarefa not in self.tarefas:
-            raise ValueError("Tarefa não encontrada")
-
-        del self.tarefas[id_tarefa]
-        self._salvar_dados()
+        self.repo.remover_tarefa(id_tarefa)
 
     def concluir_tarefa(self, id_tarefa):
-        if id_tarefa not in self.tarefas:
-            raise ValueError("Tarefa não encontrada")
-
-        if self.tarefas[id_tarefa]["status"] == "concluida":
+        # Validação de regra de negócio acadêmica
+        tarefa = self.buscar_tarefa(id_tarefa)
+        if tarefa["status"] == "concluida":
             raise ValueError("Tarefa já está concluída")
 
-        self.tarefas[id_tarefa]["status"] = "concluida"
-        self._salvar_dados()
+        self.repo.concluir_tarefa(id_tarefa)
 
     def filtrar_por_disciplina(self, disciplina):
-        return {
-            id_tarefa: tarefa
-            for id_tarefa, tarefa in self.tarefas.items()
-            if tarefa["disciplina"].lower() == disciplina.lower()
-        }
+        return self.repo.filtrar_por_disciplina(disciplina)
 
     def filtrar_por_prioridade(self, prioridade):
         prioridades_validas = ["baixa", "media", "alta"]
         if prioridade not in prioridades_validas:
             raise ValueError("Prioridade inválida")
-
-        return {
-            id_tarefa: tarefa
-            for id_tarefa, tarefa in self.tarefas.items()
-            if tarefa["prioridade"] == prioridade
-        }
+        return self.repo.filtrar_por_prioridade(prioridade)
 
     def filtrar_por_status(self, status):
         status_validos = ["pendente", "em andamento", "concluida"]
         if status not in status_validos:
             raise ValueError("Status inválido")
-
-        return {
-            id_tarefa: tarefa
-            for id_tarefa, tarefa in self.tarefas.items()
-            if tarefa["status"] == status
-        }
+        return self.repo.filtrar_por_status(status)

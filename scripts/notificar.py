@@ -6,14 +6,11 @@ from email.mime.multipart import MIMEMultipart
 
 def main():
      
-    # TODO (Integrante 2): Remover as variaveis do GitHub abaixo e substituir pelas do Jenkins
-    # (ex: JOB_NAME, BUILD_NUMBER, BUILD_URL) pois o professor proibiu o uso de GitHub Actions.
-    
     build_status = os.getenv("STATUS_BUILD", "desconhecido")
     build_tag = os.getenv("BUILD_TAG", "desconhecido")
-    build_number = os.getenv("BUILD_NUMBER", "desconecido")
+    build_number = os.getenv("BUILD_NUMBER", "desconhecido")
     build_id = os.getenv("BUILD_ID", "desconhecido")
-    job_name = os.getenv("JOB_NAME", "desconecido")
+    job_name = os.getenv("JOB_NAME", "desconhecido")
 
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = os.getenv("SMTP_PORT")
