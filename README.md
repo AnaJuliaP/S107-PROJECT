@@ -61,16 +61,6 @@ S107-PROJECT/
 git clone https://github.com/AnaJuliaP/S107-PROJECT.git
 cd S107-PROJECT
 ```
-
-### 2. Execute o sistema localmente (sem Docker)
- 
-```bash
-python -m venv venv
-venv\Scripts\activate  # Windows
-# source venv/bin/activate  # Linux/Mac
-pip install -r requirements.txt
-python main.py
-```
  
 ---
  
@@ -87,6 +77,30 @@ Isso irá subir os 4 containers:
 - **app** — a aplicação Python (build local com `Dockerfile`)
 - **mailhog** — servidor de e-mail fake na porta `http://localhost:8025`
 - **db** — banco de dados PostgreSQL
+
+**Para interagir com o sistema:**
+ 
+```bash
+docker attach app
+```
+ 
+Esse comando vai "sincronizar" com o terminal do container `app`.
+ 
+**Para confirmar que os dados foram salvos no banco:**
+ 
+```bash
+docker exec -it db psql -U admin -d tarefas -c "SELECT * FROM tarefas;"
+```
+ 
+**Para confirmar que a persistência sobrevive a um restart do container:**
+ 
+```bash
+docker restart app
+docker exec -it db psql -U admin -d tarefas -c "SELECT * FROM tarefas;"
+```
+ 
+A tarefa criada deve continuar aparecendo mesmo após o restart, já que os dados ficam no volume `db_data`, independente do ciclo de vida do container `app`.
+
 
 ### 2. Acesse o Jenkins
  
