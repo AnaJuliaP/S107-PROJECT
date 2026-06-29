@@ -27,6 +27,7 @@ Facilitar a organização de atividades acadêmicas, permitindo criar, acompanha
 
 ## 🧱 Estrutura do Projeto
 
+```text
 S107-PROJECT/
 ├── src/
 │   ├── gerenciador.py                       # Camada de serviço e validação de regras de negócio
@@ -54,6 +55,7 @@ S107-PROJECT/
 ├── requirements.txt                         # Dependências do projeto
 └── .dockerignore                            # Arquivos ignorados no build Docker
 
+```
 ---
 
 ## 🚀 Como executar o projeto
@@ -536,7 +538,6 @@ Utilizada como suporte contínuo durante o desenvolvimento do pipeline CI/CD, at
 - O teste final do pipeline rodando com SUCCESS foi validado manualmente
 
 ---
- 
  
 ## 👥 Autores
  
