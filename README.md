@@ -27,24 +27,32 @@ Facilitar a organização de atividades acadêmicas, permitindo criar, acompanha
 
 ## 🧱 Estrutura do Projeto
 
-```text
 S107-PROJECT/
 ├── src/
-│   └── gerenciador.py           # Lógica principal do sistema
+│   ├── gerenciador.py                       # Camada de serviço e validação de regras de negócio
+│   └── repositories/
+│       ├── base.py                          # Interface abstrata (contrato de persistência)
+│       ├── json_repo.py                     # Repositório JSON (fallback local)
+│       └── postgres_repo.py                 # Repositório PostgreSQL (produção)
 ├── tests/
-│   ├── test_gerenciador.py      # Testes unitários (domínio)
-│   ├── test_gerenciador_cobertura.py  # Testes de cobertura adicional
-│   └── test_main_integration.py # Testes de integração (CLI / main)
+│   ├── conftest.py                          # Configurações e fixtures globais do pytest
+│   ├── test_gerenciador.py                  # Testes unitários (domínio)
+│   ├── test_gerenciador_cobertura.py        # Testes de cobertura adicional
+│   ├── test_gerenciador_persistencia.py     # Testes de persistência (JSON e PostgreSQL)
+│   └── test_main_integration.py             # Testes de integração (CLI / main)
 ├── scripts/
-│   └── notificar.py             # Script de notificação do pipeline
-├── Dockerfile                   # Imagem da aplicação (Python 3.12 slim)
-├── Dockerfile.jenkins           # Imagem do Jenkins com Python e Docker CLI
-├── Jenkinsfile                  # Pipeline CI/CD (testes, build, Docker Hub, notificação)
-├── docker-compose.yml           # Orquestração dos 4 containers
-├── main.py                      # Interface via terminal
-├── pyproject.toml               # Configuração de build e testes
-└── requirements.txt             # Dependências do projeto
-```
+│   └── notificar.py                         # Script de notificação do pipeline
+├── site/
+│   ├── index.html                           # Página estática do projeto (legado GitHub Pages)
+│   └── pytest-theme.css                     # Tema visual do relatório de testes
+├── Dockerfile                               # Imagem da aplicação (Python 3.12 slim)
+├── Dockerfile.jenkins                       # Imagem do Jenkins com Python e Docker CLI
+├── Jenkinsfile                              # Pipeline CI/CD (testes, build, Docker Hub, notificação)
+├── docker-compose.yml                       # Orquestração dos 4 containers
+├── main.py                                  # Interface via terminal
+├── pyproject.toml                           # Configuração de build e testes
+├── requirements.txt                         # Dependências do projeto
+└── .dockerignore                            # Arquivos ignorados no build Docker
 
 ---
 
@@ -61,7 +69,7 @@ S107-PROJECT/
 git clone https://github.com/AnaJuliaP/S107-PROJECT.git
 cd S107-PROJECT
 ```
- 
+
 ---
  
 ## 🐳 Como executar com Docker Compose
@@ -77,6 +85,8 @@ Isso irá subir os 4 containers:
 - **app** — a aplicação Python (build local com `Dockerfile`)
 - **mailhog** — servidor de e-mail fake na porta `http://localhost:8025`
 - **db** — banco de dados PostgreSQL
+
+### 2. Interaja com o sistema
 
 **Para interagir com o sistema:**
  
@@ -101,19 +111,16 @@ docker exec -it db psql -U admin -d tarefas -c "SELECT * FROM tarefas;"
  
 A tarefa criada deve continuar aparecendo mesmo após o restart, já que os dados ficam no volume `db_data`, independente do ciclo de vida do container `app`.
 
-
-### 2. Acesse o Jenkins
+### 3. Acesse o Jenkins
  
 Abra `http://localhost:8080` no navegador.
  
 Na primeira execução, a senha inicial aparece no terminal. Exemplo:
-```
 jenkins | > 3cb8876f217e4d5aa79cdc95a1722acd
-```
  
 Instale os plugins sugeridos e crie seu usuário.
  
-### 3. Configure a credencial do Docker Hub
+### 4. Configure a credencial do Docker Hub
  
 Vá em **Gerenciar Jenkins → Credentials → Global → Add Credentials**:
  
@@ -124,7 +131,7 @@ Vá em **Gerenciar Jenkins → Credentials → Global → Add Credentials**:
 | Password | (token de acesso Docker Hub) |
 | ID | docker-hub-leticialm |
  
-### 4. Configure as credenciais de e-mail
+### 5. Configure as credenciais de e-mail
  
 Adicione mais duas credenciais do tipo **Secret text**:
  
@@ -133,7 +140,7 @@ Adicione mais duas credenciais do tipo **Secret text**:
 | EMAIL_REMETENTE | endereço de e-mail remetente |
 | EMAIL_DESTINO | endereço de e-mail destinatário |
  
-### 5. Crie o pipeline
+### 6. Crie o pipeline
  
 Clique em **Novo tarefa → Pipeline**, configure:
 - **Definition:** Pipeline script from SCM
@@ -141,28 +148,27 @@ Clique em **Novo tarefa → Pipeline**, configure:
 - **Repository URL:** `https://github.com/AnaJuliaP/S107-PROJECT`
 - **Branch:** `*/main`
 - **Script Path:** `Jenkinsfile`
+
 Clique em **Construir agora** para rodar o pipeline.
 
-### 6. Visualizando os e-mails
+### 7. Visualizando os e-mails
 
 O projeto utiliza o MailHog como servidor SMTP para testes.
 
-Após a execução da pipeline, as notificações enviadas podem ser visualizadas através da interface web:
-
-```bash
+Após a execução do pipeline, as notificações enviadas podem ser visualizadas através da interface web:
 http://localhost:8025
-```
 
 O MailHog captura todos os e-mails enviados pelo pipeline sem necessidade de utilizar um servidor SMTP real, permitindo validar o funcionamento da etapa de notificação de forma segura durante os testes.
 
- 
-### 7. Para parar os containers
+### 8. Para parar os containers
  
 ```bash
 docker compose down
 ```
  
 > ⚠️ Use `docker compose down -v` apenas se quiser apagar todos os dados e começar do zero.
+
+---
 
 ## Persistência de Dados
 
@@ -174,32 +180,39 @@ Os seguintes dados permanecem armazenados:
 * Usuários criados no Jenkins
 * Jobs/Pipelines configurados
 * Credenciais cadastradas
-* Dados da aplicação
+* Tarefas salvas no banco PostgreSQL
 
 ### Testando a persistência
 
 Execute:
 
+```bash
 docker compose down
+```
 
 Em seguida:
 
+```bash
 docker compose up -d
+```
 
-Ao acessar novamente o Jenkins, as configurações previamente cadastradas devem continuar disponíveis.
+Ao acessar novamente o Jenkins, as configurações previamente cadastradas devem continuar disponíveis. As tarefas salvas no banco também persistem.
 
 Para remover completamente os dados persistidos e reiniciar o ambiente do zero:
 
+```bash
 docker compose down -v
+```
 
-⚠️ Este comando remove também os volumes Docker associados ao projeto.
+> ⚠️ Este comando remove também os volumes Docker associados ao projeto.
 
- 
 ---
  
 ## 🧪 Testes
  
-O projeto utiliza pytest com cobertura mínima de **90%** (configurado em `pyproject.toml`). A cobertura atual é de **100%**.
+O projeto utiliza pytest com cobertura mínima de **90%** (configurado em `pyproject.toml`). A cobertura atual é de **94%**.
+
+São 62 testes no total: 49 rodam sempre (unitários e integração) e 13 são testes de integração com o PostgreSQL, executados quando o banco está disponível no ambiente.
  
 ```bash
 pytest -v
@@ -220,14 +233,14 @@ O `Jenkinsfile` executa automaticamente as seguintes etapas:
 | Stage | O que faz |
 |---|---|
 | Checkout | Clona o repositório do GitHub |
-| Instalar Dependências | Instala pytest, pytest-cov, pytest-html e build |
-| Testes | Roda 49 testes com cobertura, gera `report.html` e `coverage.xml` |
+| Instalar Dependências | Instala pytest, pytest-cov, pytest-html, build e psycopg2-binary |
+| Testes | Roda 62 testes com cobertura (49 passam, 13 pulados por ausência do banco), gera `report.html` e `coverage.xml` |
 | Build | Empacota o projeto com `python -m build`, gera `.whl` e `.tar.gz` |
 | Docker Build e Push | Builda o `Dockerfile.jenkins` e publica a imagem do Jenkins no Docker Hub com tags `latest` e `{BUILD_NUMBER}` |
 | Notificação | Envia e-mail com o status do pipeline via Mailhog |
  
 Os artefatos gerados (relatório de testes, cobertura e pacote) ficam disponíveis no Jenkins para download.
-Esses artefatos são armazenados automaticamente pela pipeline para fins de auditoria, rastreabilidade e validação dos resultados.
+Esses artefatos são armazenados automaticamente pelo pipeline para fins de auditoria, rastreabilidade e validação dos resultados.
  
 ---
  
@@ -251,6 +264,7 @@ docker run --rm -p 8080:8080 leticialm/s107-project:latest
 - Status válidos: `pendente`, `em andamento`, `concluida`
 - IDs são gerados automaticamente e são únicos
 - Não é possível concluir uma tarefa já concluída
+
 ---
  
 ## 🛠️ Tecnologias Utilizadas
@@ -262,13 +276,14 @@ docker run --rm -p 8080:8080 leticialm/s107-project:latest
 - Docker Hub
 - Mailhog (servidor SMTP para testes)
 - PostgreSQL 15
+
 ---
  
 ## 🤖 Uso de Inteligência Artificial
  
 ### Modelos utilizados
  
-- **Claude (Anthropic) — via claude.ai**— Lilyan
+- **Claude (Anthropic) — via claude.ai** — Lilyan
 - **Claude (Anthropic) — via claude.ai** — Ana Julia
 - **Claude (Anthropic) — via claude.ai** — Letícia
 - **Gemini 1.5 Pro (Google)** — Lucas
@@ -279,7 +294,10 @@ docker run --rm -p 8080:8080 leticialm/s107-project:latest
 
 ### Para quê foi usada - Lilyan:
  
-- Entendimento do projeto e da divisão de tarefas
+- Atualização do `docker-compose.yml` com `depends_on`, variáveis de ambiente do banco (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`) e restauração de `stdin_open`/`tty` no serviço `app`
+- Teste local da integração com PostgreSQL
+- Investigação de como conectar o Jenkins ao banco para rodar os 13 testes de integração no pipeline, identificando o problema de dados acumulados entre execuções
+- Entendimento dos conceitos de Repository Pattern, redes Docker, volumes, fallback JSON/PostgreSQL e fixture de limpeza de banco
 - Criação do `docker-compose.yml` com 4 containers e configuração de redes
 - Debug de erros no `Dockerfile.jenkins` (tag inválida, conflito de wheel com apt)
 - Validação e testes do pipeline Jenkins
@@ -301,15 +319,20 @@ Resposta aceita com ajustes: a IA explicou os papéis de cada integrante e ident
 > "Agora cria o arquivo docker-compose.yml. Vou te mostrar o Dockerfile.jenkins e o Dockerfile da aplicação primeiro."
  
 Resposta aceita com ajuste: a IA gerou o compose com 4 containers. O placeholder da imagem do Docker Hub foi ajustado manualmente quando a Letícia publicou a imagem real.
- 
+
 **Prompt 4:**
 > "Deu esse erro no docker compose up --build [erro do pip wheel]. O que está errado?"
  
 Resposta aceita: a IA identificou o conflito entre o wheel instalado pelo apt (Debian) e o pip tentando fazer upgrade, e explicou como corrigir no Dockerfile.jenkins.
+
+**Prompt 5:**
+> "se eu rodar o projeto via terminal sem o docker, ele salva as coisas no json?"
+
+Resposta aceita: a IA explicou o mecanismo de fallback do `gerenciador.py` — se as variáveis de banco não existirem no ambiente, o sistema usa automaticamente o `JSONTarefaRepository`.
  
 ### Dinâmica de uso
  
-Usada em sessão contínua de pair programming ao longo de vários dias, cobrindo desde o entendimento dos conceitos até o debug de problemas reais no Docker.
+Usada em sessão contínua de pair programming ao longo de vários dias, cobrindo desde o entendimento dos conceitos até o teste local da integração com PostgreSQL e investigação de melhorias no pipeline.
 
 ---
 ### Para quê foi usada - Ana Julia:
@@ -323,27 +346,27 @@ Usada em sessão contínua de pair programming ao longo de vários dias, cobrind
 ### Exemplos reais de prompts
  
 **Prompt 1**
->Como configurar um Dockerfile para rodar Jenkins com Python 3 instalado?
+> Como configurar um Dockerfile para rodar Jenkins com Python 3 instalado?
 
 Resposta aceita: a IA explicou como estender a imagem oficial do Jenkins instalando Python via apt-get e as ferramentas de teste via pip, mantendo boas práticas como voltar para USER jenkins ao final.
 
 **Prompt 2**
->Como estruturar as stages de teste e build no Jenkinsfile para salvar artefatos no Jenkins?
+> Como estruturar as stages de teste e build no Jenkinsfile para salvar artefatos no Jenkins?
 
 Resposta aceita: a IA explicou o uso de archiveArtifacts dentro do bloco post e como separar o relatório de testes do pacote gerado pelo build.
 
 **Prompt 3**
->Variáveis como currentBuild.currentResult podem ser usadas diretamente dentro de sh no Jenkinsfile?
+> Variáveis como currentBuild.currentResult podem ser usadas diretamente dentro de sh no Jenkinsfile?
 
 Resposta aceita: a IA explicou que não funcionam com aspas simples e sugeriu capturar o valor em variável local dentro de um bloco script{} antes de passar ao shell.
 
 **Prompt 4**
->Como identificar quais ramos do código não estão sendo cobertos pelos testes usando pytest-cov?
+> Como identificar quais ramos do código não estão sendo cobertos pelos testes usando pytest-cov?
 
 Resposta aceita: a IA explicou o uso da flag --cov-report=term-missing que mostra exatamente as linhas não cobertas, o que ajudou a identificar os casos faltantes no editar_tarefa().
 
 **Prompt 5**
->O Dockerfile está apontando vulnerabilidades críticas na imagem base do Jenkins, como resolver?
+> O Dockerfile está apontando vulnerabilidades críticas na imagem base do Jenkins, como resolver?
 
 Resposta aceita: a IA sugeriu trocar para a variante -slim e adicionar apt-get upgrade -y para reduzir CVEs herdados da imagem base.
 
@@ -365,22 +388,20 @@ Utilizada em sessões pontuais durante o desenvolvimento, consultando dúvidas e
 **Prompt 1:**
 > "to com esse erro no jenkins: docker: not found / ERROR: script returned exit code 127"
 
-Resposta aceita com ajustes: a IA sugeriu inicialmente instalar o `docker.io` via apt, o que não resolveu o problema. Após mais investigação, a solução correta foi instalar o `docker-ce-cli` via repositório oficial do Docker, adicionando a chave GPG e o repositório antes da instalação
+Resposta aceita com ajustes: a IA sugeriu inicialmente instalar o `docker.io` via apt, o que não resolveu o problema. Após mais investigação, a solução correta foi instalar o `docker-ce-cli` via repositório oficial do Docker, adicionando a chave GPG e o repositório antes da instalação.
 
 **Prompt 2:**
-> "docker exec -it jenkins docker version
-> permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock"
+> "docker exec -it jenkins docker version — permission denied while trying to connect to the Docker daemon socket"
 
 Resposta aceita: a IA identificou que o usuário `jenkins` não tinha permissão no socket do Docker e orientou a usar `group_add` no `docker-compose.yml` com o GID do socket, que no Docker Desktop no Windows é `0` (root).
 
 **Prompt 3:**
-> "docker compose build --no-cache jenkins
-> error: externally-managed-environment — pip não consegue instalar pacotes sistema"
+> "docker compose build --no-cache jenkins — error: externally-managed-environment"
 
-Resposta aceita: a IA identificou que o comando `pip install --upgrade pip` estava sem a flag `--break-system-packages`, causando falha no build. A correção foi adicionar a flag em todos os comandos pip do Dockerfile.
+Resposta aceita: a IA identificou que o comando `pip install --upgrade pip` estava sem a flag `--break-system-packages`, causando falha no build.
 
 **Prompt 4:**
-> "pq quando eu coloquei o group_add "0" (root) funcionou?"
+> "pq quando eu coloquei o group_add 0 (root) funcionou?"
 
 Resposta aceita: a IA explicou que no Docker Desktop no Windows o socket pertence ao grupo root (GID 0), diferente do Linux onde o GID costuma ser 999.
 
@@ -390,92 +411,82 @@ Usada em sessão contínua de debug do pipeline, cobrindo desde o erro inicial d
 
 ---
 
-
 ### Para quê foi usada - Vitoria:
 - Apoio para entender e organizar os requisitos de redes no docker-compose.yml
 - Explicação sobre como separar redes no Docker Compose sem alterar toda a estrutura já existente do projeto
-- Validação se o projeto ainda cumpria os requisitos mínimos da atividade, como:
-      - mínimo de 4 containers
-      - comunicação entre containers
-      - uso de Dockerfile local
-      - uso de imagens do Docker Hub
-      - uso de volumes
-      - uso de networks
+- Validação se o projeto ainda cumpria os requisitos mínimos da atividade
 - Auxílio para compreender a diferença entre uma rede única e redes separadas por responsabilidade
-- Apoio na formulação de explicações técnicas para a defesa Q&A, principalmente sobre isolamento de containers, comunicação por hostname e uso do driver bridge
+- Apoio na formulação de explicações técnicas para a defesa Q&A
 - Revisão conceitual da configuração das redes, garantindo que o mailhog ficasse isolado dos serviços que não precisavam acessá-lo
 
 ### Exemplos reais de prompts
  
 **Prompt 1:**
+> "No meu docker-compose.yml já existe uma rede principal. Como eu posso adicionar uma rede separada apenas para o Mailhog sem alterar o restante da estrutura?"
 
->"No meu docker-compose.yml já existe uma rede principal. Como eu posso adicionar uma rede separada apenas para o Mailhog sem alterar o restante da estrutura?"
-
-Resposta aceita: a IA explicou que seria possível manter a rede principal já existente e adicionar uma segunda rede apenas para o serviço de e-mail. A sugestão foi usada como referência para organizar melhor o isolamento entre os containers.
+Resposta aceita: a IA explicou que seria possível manter a rede principal já existente e adicionar uma segunda rede apenas para o serviço de e-mail.
 
 **Prompt 2:**
-
->"Com essa configuração de redes no Docker Compose, o projeto ainda atende aos requisitos de comunicação entre containers e uso de networks?"
+> "Com essa configuração de redes no Docker Compose, o projeto ainda atende aos requisitos de comunicação entre containers e uso de networks?"
 
 Resposta aceita: a IA ajudou a conferir os requisitos do projeto, explicando que a comunicação entre os containers continuava funcionando pela rede principal e que a rede adicional demonstrava separação de responsabilidades.
 
 **Prompt 3:**
+> "Como eu posso explicar na defesa a diferença entre deixar todos os containers em uma única rede e separar serviços por responsabilidade?"
 
->"Como eu posso explicar na defesa a diferença entre deixar todos os containers em uma única rede e separar serviços por responsabilidade?"
-
-Resposta aceita: a IA sugeriu uma explicação conceitual sobre isolamento de serviços, princípio de menor privilégio e comunicação entre containers apenas quando necessário. Essa explicação foi adaptada para a defesa do projeto.
+Resposta aceita: a IA sugeriu uma explicação conceitual sobre isolamento de serviços e princípio de menor privilégio.
 
 **Prompt 4:**
+> "No Docker Compose, os containers conseguem se comunicar pelo nome do serviço? Como posso explicar isso no README?"
 
->"No Docker Compose, os containers conseguem se comunicar pelo nome do serviço? Como posso explicar isso no README?"
-
-Resposta aceita: a IA explicou que, dentro da mesma network do Docker Compose, os serviços conseguem se comunicar usando o nome definido no docker-compose.yml como hostname. Essa explicação foi usada para melhorar a documentação técnica.
+Resposta aceita: a IA explicou que, dentro da mesma network do Docker Compose, os serviços conseguem se comunicar usando o nome definido no docker-compose.yml como hostname.
 
 ### Dinâmica de uso
----
-A IA foi utilizada como apoio durante a etapa de configuração e entendimento do docker-compose.yml, principalmente na parte de redes entre containers. O uso ocorreu de forma orientada por dúvidas pontuais: primeiro foi analisado se a configuração atual atendia aos requisitos, depois foram discutidas melhorias para separar responsabilidades entre as redes e, por fim, foram elaboradas explicações para a defesa do projeto.
 
+A IA foi utilizada como apoio durante a etapa de configuração e entendimento do docker-compose.yml, principalmente na parte de redes entre containers.
+
+---
 
 ### Para quê foi usada - Lucas:
 
-- **Arquitetura de Persistência:** Definição da estratégia de volumes no `docker-compose.yml` para garantir que os dados da aplicação (`tarefas.json`) não sejam perdidos ao derrubar os containers.
-- **Configuração de Statefullness no Jenkins:** Implementação de volumes nomeados para preservar o diretório `/var/jenkins_home`, garantindo que plugins e jobs configurados pelo grupo sobrevivam a reinicializações.
-- **Mapeamento de Bind Mounts:** Configuração técnica para espelhar a pasta local `./data` para dentro do container da aplicação, facilitando a depuração e o backup manual dos dados.
-- **Resolução de Erros de I/O:** Uso de IA para debugar permissões de escrita em volumes Docker rodando em sistemas Windows (WSL2/Docker Desktop).
-- **Resolução de Conflitos e Atualização do Repositório:** Uso de Git e IA para realizar pull do repositório remoto mesclando modificações locais e resolvendo conflitos do README.
-- **Modularização e Banco de Dados (PostgreSQL):** Modelagem e implementação do Repository Pattern para desacoplar as regras de negócios da persistência de banco de dados, criando classes distintas para repositórios JSON e PostgreSQL.
+- **Arquitetura de Persistência:** Definição da estratégia de volumes no `docker-compose.yml`
+- **Configuração de Statefullness no Jenkins:** Implementação de volumes nomeados para preservar o diretório `/var/jenkins_home`
+- **Mapeamento de Bind Mounts:** Configuração técnica para espelhar a pasta local `./data` para dentro do container da aplicação
+- **Resolução de Erros de I/O:** Debug de permissões de escrita em volumes Docker rodando em sistemas Windows
+- **Resolução de Conflitos:** Uso de Git e IA para realizar pull do repositório remoto mesclando modificações locais
+- **Modularização e Banco de Dados (PostgreSQL):** Modelagem e implementação do Repository Pattern
 
 ### Exemplos reais de prompts
  
 **Prompt 1:**
 > "Como configurar um volume no docker-compose que aponte para uma pasta local específica para que eu possa ver o arquivo tarefas.json sendo atualizado em tempo real?"
- 
+
 Resposta aceita: A IA sugeriu o uso de Bind Mounts (`./data:/app/data`) em vez de Named Volumes, explicando a diferença de visibilidade entre os dois.
  
 **Prompt 2:**
 > "O Jenkins perde todas as configurações toda vez que eu dou um 'docker compose down'. Como criar um volume nomeado para persistir o estado dele?"
- 
+
 Resposta aceita: A IA forneceu a sintaxe correta da seção `volumes:` no topo do arquivo e o mapeamento correto para `/var/jenkins_home`.
  
 **Prompt 3:**
 > "Como garantir que o container da aplicação tenha permissão de escrita no volume criado, considerando que estou usando Docker Desktop no Windows?"
- 
-Resposta aceita: Orientações sobre como o Docker lida com o sistema de arquivos 9P e permissões automáticas, evitando erros de 'Permission Denied' no Python.
+
+Resposta aceita: Orientações sobre como o Docker lida com o sistema de arquivos 9P e permissões automáticas.
 
 **Prompt 4:**
 > "pode mexer no conflito, mas dê a preferencia para o que está no github, após isso quero que você mapeie a adaptação do 'gerenciador.py' para usar o postgress"
 
-Resposta aceita: A IA mapeou o uso do driver `psycopg2` e propôs uma arquitetura robusta com fallback automático para JSON (mantendo os testes locais e no pipeline de CI intactos).
+Resposta aceita: A IA mapeou o uso do driver `psycopg2` e propôs uma arquitetura robusta com fallback automático para JSON.
 
 **Prompt 5:**
 > "Estou vendo aqui o código parece ser extenso, não seria melhor modularizar essa proposta??"
 
-Resposta aceita: A IA sugeriu e detalhou a aplicação do Repository Pattern, separando as implementações de banco (PostgreSQL) e arquivo (JSON) em uma estrutura limpa sob o diretório `src/repositories/`.
+Resposta aceita: A IA sugeriu e detalhou a aplicação do Repository Pattern, separando as implementações em `src/repositories/`.
 
 ### Dinâmica de uso
-Atuação focada na robustez da infraestrutura, utilizando a IA para validar decisões de design de volumes e acelerar a resolução de conflitos entre o sistema de arquivos local e o ambiente containerizado.
----
+Atuação focada na robustez da infraestrutura, utilizando a IA para validar decisões de design de volumes e acelerar a resolução de conflitos.
 
+---
 
 ### Para quê foi usada - Gustavo:
 
@@ -487,19 +498,15 @@ Atuação focada na robustez da infraestrutura, utilizando a IA para validar dec
 
 ### Exemplos reais de prompts
  
-**Prompts:**
-
 **Prompt 1:**
 > "Agora tem esse erro: RUN python3 -m pip install --break-system-packages --upgrade pip setuptools wheel..."
 
 Resposta aceita: a IA identificou conflito entre pacotes instalados pelo Debian (`wheel`) e o `pip`, explicando como remover o upgrade problemático no Dockerfile.
 
-
 **Prompt 2:**
 > "Tem como eu testar se o email tá funcionando?"
 
 Resposta aceita: a IA orientou a utilizar MailHog para validar o envio SMTP localmente dentro do Docker Compose, explicando o acesso via navegador (`localhost:8025`).
-
 
 **Prompt 3:**
 > "Chat, está sendo gerado duas imagens, como arrumo?"
@@ -509,6 +516,7 @@ Resposta aceita: a IA explicou a diferença entre múltiplas tags (`latest` e `$
 ### Dinâmica de uso
 Utilizada como suporte contínuo durante o desenvolvimento do pipeline CI/CD, atuando como auxílio técnico para configuração do Jenkins, Docker Compose, integração com Docker Hub, variáveis de ambiente, notificações SMTP e resolução de erros de infraestrutura e automação.
 
+---
 
 ### O que não foi feito por IA
  
@@ -516,8 +524,9 @@ Utilizada como suporte contínuo durante o desenvolvimento do pipeline CI/CD, at
 - Os commits e PRs foram feitos manualmente por cada integrante
 - A configuração do Jenkins (criação do job, adição de credenciais) foi feita manualmente
 - O teste final do pipeline rodando com SUCCESS foi validado manualmente
+- A revisão das PRs e identificação de conflitos entre branches foi feita manualmente
+
 ---
- 
  
 ## 👥 Autores
  
@@ -534,4 +543,3 @@ INATEL — S107 Gerência de Configuração e Evolução de Software
 ## 📄 Licença
  
 Este projeto é apenas para fins acadêmicos.
- 
