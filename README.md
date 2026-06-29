@@ -30,22 +30,32 @@ Facilitar a organização de atividades acadêmicas, permitindo criar, acompanha
 ```text
 S107-PROJECT/
 ├── src/
-│   └── gerenciador.py           # Lógica principal do sistema
+│   ├── gerenciador.py                       # Camada de serviço e validação de regras de negócio
+│   └── repositories/
+│       ├── base.py                          # Interface abstrata (contrato de persistência)
+│       ├── json_repo.py                     # Repositório JSON (fallback local)
+│       └── postgres_repo.py                 # Repositório PostgreSQL (produção)
 ├── tests/
-│   ├── test_gerenciador.py      # Testes unitários (domínio)
-│   ├── test_gerenciador_cobertura.py  # Testes de cobertura adicional
-│   └── test_main_integration.py # Testes de integração (CLI / main)
+│   ├── conftest.py                          # Configurações e fixtures globais do pytest
+│   ├── test_gerenciador.py                  # Testes unitários (domínio)
+│   ├── test_gerenciador_cobertura.py        # Testes de cobertura adicional
+│   ├── test_gerenciador_persistencia.py     # Testes de persistência (JSON e PostgreSQL)
+│   └── test_main_integration.py             # Testes de integração (CLI / main)
 ├── scripts/
-│   └── notificar.py             # Script de notificação do pipeline
-├── Dockerfile                   # Imagem da aplicação (Python 3.12 slim)
-├── Dockerfile.jenkins           # Imagem do Jenkins com Python e Docker CLI
-├── Jenkinsfile                  # Pipeline CI/CD (testes, build, Docker Hub, notificação)
-├── docker-compose.yml           # Orquestração dos 4 containers
-├── main.py                      # Interface via terminal
-├── pyproject.toml               # Configuração de build e testes
-└── requirements.txt             # Dependências do projeto
-```
+│   └── notificar.py                         # Script de notificação do pipeline
+├── site/
+│   ├── index.html                           # Página estática do projeto (legado GitHub Pages)
+│   └── pytest-theme.css                     # Tema visual do relatório de testes
+├── Dockerfile                               # Imagem da aplicação (Python 3.12 slim)
+├── Dockerfile.jenkins                       # Imagem do Jenkins com Python e Docker CLI
+├── Jenkinsfile                              # Pipeline CI/CD (testes, build, Docker Hub, notificação)
+├── docker-compose.yml                       # Orquestração dos 4 containers
+├── main.py                                  # Interface via terminal
+├── pyproject.toml                           # Configuração de build e testes
+├── requirements.txt                         # Dependências do projeto
+└── .dockerignore                            # Arquivos ignorados no build Docker
 
+```
 ---
 
 ## 🚀 Como executar o projeto
@@ -199,7 +209,9 @@ docker compose down -v
  
 ## 🧪 Testes
  
-O projeto utiliza pytest com cobertura mínima de **90%** (configurado em `pyproject.toml`). A cobertura atual é de **100%**.
+O projeto utiliza pytest com cobertura mínima de **90%** (configurado em `pyproject.toml`). A cobertura atual é de **94%**.
+
+São 62 testes no total: 49 rodam sempre (unitários e integração) e 13 são testes de integração com o PostgreSQL, executados quando o banco está disponível no ambiente.
  
 ```bash
 pytest -v
@@ -220,8 +232,8 @@ O `Jenkinsfile` executa automaticamente as seguintes etapas:
 | Stage | O que faz |
 |---|---|
 | Checkout | Clona o repositório do GitHub |
-| Instalar Dependências | Instala pytest, pytest-cov, pytest-html e build |
-| Testes | Roda 49 testes com cobertura, gera `report.html` e `coverage.xml` |
+| Instalar Dependências | Instala pytest, pytest-cov, pytest-html, build e psycopg2-binary |
+| Testes | Roda 62 testes com cobertura (49 passam, 13 pulados por ausência do banco), gera `report.html` e `coverage.xml` |
 | Build | Empacota o projeto com `python -m build`, gera `.whl` e `.tar.gz` |
 | Docker Build e Push | Builda o `Dockerfile.jenkins` e publica a imagem do Jenkins no Docker Hub com tags `latest` e `{BUILD_NUMBER}` |
 | Notificação | Envia e-mail com o status do pipeline via Mailhog |
@@ -278,8 +290,11 @@ docker run --rm -p 8080:8080 leticialm/s107-project:latest
 ---
 
 ### Para quê foi usada - Lilyan:
- 
-- Entendimento do projeto e da divisão de tarefas
+
+- Atualização do `docker-compose.yml` com `depends_on`, variáveis de ambiente do banco (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`) e restauração de `stdin_open`/`tty` no serviço `app`
+- Teste local da integração com PostgreSQL
+- Investigação de como conectar o Jenkins ao banco para rodar os 13 testes de integração no pipeline, identificando o problema de dados acumulados entre execuções
+- Entendimento dos conceitos de Repository Pattern, redes Docker, volumes, fallback JSON/PostgreSQL e fixture de limpeza de banco
 - Criação do `docker-compose.yml` com 4 containers e configuração de redes
 - Debug de erros no `Dockerfile.jenkins` (tag inválida, conflito de wheel com apt)
 - Validação e testes do pipeline Jenkins
@@ -306,10 +321,15 @@ Resposta aceita com ajuste: a IA gerou o compose com 4 containers. O placeholder
 > "Deu esse erro no docker compose up --build [erro do pip wheel]. O que está errado?"
  
 Resposta aceita: a IA identificou o conflito entre o wheel instalado pelo apt (Debian) e o pip tentando fazer upgrade, e explicou como corrigir no Dockerfile.jenkins.
+
+**Prompt 5:**
+> "se eu rodar o projeto via terminal sem o docker, ele salva as coisas no json?"
+
+Resposta aceita: a IA explicou o mecanismo de fallback do `gerenciador.py` — se as variáveis de banco não existirem no ambiente, o sistema usa automaticamente o `JSONTarefaRepository`.
  
 ### Dinâmica de uso
  
-Usada em sessão contínua de pair programming ao longo de vários dias, cobrindo desde o entendimento dos conceitos até o debug de problemas reais no Docker.
+Usada em sessão contínua de pair programming ao longo de vários dias, cobrindo desde o entendimento dos conceitos até o teste local da integração com PostgreSQL e investigação de melhorias no pipeline.
 
 ---
 ### Para quê foi usada - Ana Julia:
@@ -516,8 +536,8 @@ Utilizada como suporte contínuo durante o desenvolvimento do pipeline CI/CD, at
 - Os commits e PRs foram feitos manualmente por cada integrante
 - A configuração do Jenkins (criação do job, adição de credenciais) foi feita manualmente
 - O teste final do pipeline rodando com SUCCESS foi validado manualmente
+
 ---
- 
  
 ## 👥 Autores
  
